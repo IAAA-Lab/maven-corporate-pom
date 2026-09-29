@@ -1,7 +1,7 @@
 # Parent y BOM corporativos con Spring Boot 2.7
 
 Ejemplo de plataforma Maven de empresa: **Spring Boot 2.7.18** y **Java 8**.
-Dos artefactos distintos:
+Dos artefactos distintos, un reactor `corporate` que fija `groupId` y versión:
 
 - `corporate-bom` es el catálogo de versiones (`spring-boot-dependencies` en
   Spring Boot).
@@ -10,31 +10,24 @@ Dos artefactos distintos:
 
 Cadena de **parent**:
 
-`greeting-app` / `greeting` → `corporate-parent` → `corporate-bom`
+`greeting-app` / `greeting` → `corporate-parent` → `corporate`
 
-Es el mismo esquema que Spring Boot:
+BOM y parent heredan el reactor; el `relativePath` por defecto es
+`../pom.xml`. `corporate-parent` importa `corporate-bom` (misma versión
+`${project.version}`). Las apps no declaran el BOM ni el reactor.
 
-aplicación → `spring-boot-starter-parent` → `spring-boot-dependencies`
+Este git tiene **tres proyectos Maven**:
 
-Cada POM tiene un solo parent. `greeting` y `greeting-app` declaran
-`corporate-parent`. Ese POM declara `corporate-bom` (solo catálogo de
-versiones) y le añade compiler, enforcer y plugins. Dos saltos, como Spring
-Boot: la app no declara el catálogo; declara el parent de política, y ese
-declara el catálogo. `spring-boot-starter-parent` tampoco está fundido con
-`spring-boot-dependencies`.
+1. `corporate` (reactor: `corporate-bom` + `corporate-parent`)
+2. `greeting`
+3. `greeting-app`
 
-Este git tiene **cuatro proyectos Maven independientes**:
-
-1. `corporate-bom`
-2. `corporate-parent`
-3. `greeting`
-4. `greeting-app`
-
-BOM y parent se publican como **1.0.0**. `corporate-parent`, `greeting` y
-`greeting-app` dejan `<relativePath/>` vacío: Maven pide el parent a Nexus,
-no a `../pom.xml`. El BOM hay que publicarlo antes que el parent (si no, el
-build de `corporate-parent` no encuentra `corporate-bom`). Luego, el mismo
-orden para greeting: parent ya en Nexus.
+BOM y parent salen con `<revision>` del reactor (**1.0.0**). Un bump de
+plataforma en `corporate` es cambiar esa property. `flatten-maven-plugin`
+(`resolveCiFriendliesOnly`) deja en Nexus `1.0.0`, no `${revision}`.
+`greeting` y `greeting-app` dejan `<relativePath/>` vacío: Maven pide el
+parent a Nexus, no a este checkout. Siguen declarando a mano la versión de
+`corporate-parent`: no están en el reactor.
 
 ## Settings de usuario: dónde se leen los artefactos
 
@@ -55,10 +48,10 @@ El deploy **no** usa ningún group: usa las URL de `<distributionManagement>`
 El password no va escrito en git: en el settings está `${env.NEXUS_PASSWORD}`.
 El usuario del `<server>` es `admin` (fijo en el fichero de la demo).
 
-## Corporate-bom: catálogo de versiones y dónde se publica (`distributionManagement`)
+## Corporate: coordenadas, metadatos y dónde se publica (`distributionManagement`)
 
-La publicación se declara en `<distributionManagement>` del POM de
-`corporate-bom`; `corporate-parent`, `greeting` y `greeting-app` lo heredan.
+La publicación se declara en `<distributionManagement>` del reactor
+`corporate`. Lo heredan el BOM, el parent, `greeting` y `greeting-app`.
 
 El `<id>` (`nexus-internal-releases`) coincide con un `<server>` del
 settings (usuario `admin`, password interpolado). Las URL son
@@ -78,13 +71,12 @@ El settings de usuario por defecto es `~/.m2/settings.xml`.
 El repo guarda `settings/nexus-settings.xml`. `./demo.sh` lo copia ahí para que 
 `mvn` pueda usar Nexus para consumir artefactos.
 
-Después arranca Nexus y hace deploy, en este orden, a
-`internal-artifact-releases`: `corporate-bom`, `corporate-parent`,
-`greeting`. Entre un deploy y el siguiente borra
-`~/.m2/repository/dev/example` para que el parent y el BOM no salgan del
-disco. Luego los tests de `greeting-app` (parent, BOM y librería por
-`maven-internal`; Spring Boot por `maven-public` → proxy `maven-central`).
-Al final, deploy de `greeting-app` con `-DskipTests`.
+Después arranca Nexus y hace deploy del reactor `corporate` (publica
+`corporate`, `corporate-bom` y `corporate-parent`) y luego de `greeting`.
+Antes de greeting borra `~/.m2/repository/dev/example` para que el parent
+no salga del disco. Luego los tests de `greeting-app` (parent, BOM y
+librería por `maven-internal`; Spring Boot por `maven-public` → proxy
+`maven-central`). Al final, deploy de `greeting-app` con `-DskipTests`.
 
 `greeting` y `greeting-app` declaran `groupId` `dev.example.greeting`. Si no,
 heredarían `dev.example.corporate` del parent.
@@ -97,6 +89,7 @@ flowchart BT
         bootBom["spring-boot-dependencies 2.7.18"]
     end
     subgraph internal["Nexus internal-artifact-releases"]
+        reactor["dev.example.corporate:corporate 1.0.0"]
         bom["dev.example.corporate:corporate-bom 1.0.0"]
         parent["dev.example.corporate:corporate-parent 1.0.0"]
         library["dev.example.greeting:greeting 2.0.0"]
@@ -104,7 +97,9 @@ flowchart BT
     end
 
     bom -->|"import scope"| bootBom
-    parent -->|"parent desde Nexus"| bom
+    bom -->|"parent"| reactor
+    parent -->|"parent"| reactor
+    parent -->|"import scope"| bom
     library -->|"parent desde Nexus"| parent
     app -->|"parent desde Nexus"| parent
     app -->|"dependency, sin version"| library
@@ -117,13 +112,16 @@ independientes.
 
 ```mermaid
 flowchart LR
+    reactor["corporate 1.0.0"]
     bom["corporate-bom 1.0.0"]
     parent["corporate-parent 1.0.0"]
     boot["Spring Boot 2.7.18"]
     library["greeting 2.0.0"]
     product["greeting-app 0.1.0"]
 
-    parent -->|"parent"| bom
+    bom -->|"parent"| reactor
+    parent -->|"parent"| reactor
+    parent -->|"import"| bom
     bom -->|"manages"| boot
     bom -->|"manages"| library
     library -->|"parent"| parent
@@ -131,8 +129,9 @@ flowchart LR
     product -->|"usa versión gestionada"| library
 ```
 
-- **Plataforma:** BOM y parent salen con la misma versión. La aplicación
-  elige plataforma cambiando la versión del parent.
+- **Plataforma:** `<revision>` en `corporate/pom.xml`. BOM y parent usan
+  `${revision}` en el GAV del padre. La aplicación elige plataforma
+  cambiando la versión de `corporate-parent`.
 - **Gestionadas:** el BOM fija Spring Boot y librerías internas aprobadas. No
   tienen que coincidir con la versión de plataforma.
 - **Producto:** cada librería y aplicación declara su versión. Si no, heredaría
@@ -153,8 +152,9 @@ flowchart LR
     oldPlatform -->|"nuevo release de plataforma"| newPlatform
 ```
 
-`spring-boot.version` está en `corporate-bom`. `corporate-parent` lo hereda
-para pluginManagement porque el BOM es su parent, no un import.
+`spring-boot.version` está en el reactor: el BOM la usa al importar
+`spring-boot-dependencies` y el parent al fijar `spring-boot-maven-plugin`.
+Un import de BOM no transmite properties.
 
 ## Repositorios
 
@@ -200,4 +200,5 @@ flowchart TB
 - [Maven mirror guide](https://maven.apache.org/guides/mini/guide-mirror-settings)
 - [Sonatype: why repositories in POMs are problematic](https://www.sonatype.com/blog/2009/02/why-putting-repositories-in-your-poms-is-a-bad-idea)
 - [Nexus Repository REST: repositories](https://help.sonatype.com/en/repositories-api.html)
+- [Maven CI-friendly versions](https://maven.apache.org/maven-ci-friendly.html)
 - [JLBP-15: publish a BOM for multi-module projects](http://jlbp.dev/JLBP-15)

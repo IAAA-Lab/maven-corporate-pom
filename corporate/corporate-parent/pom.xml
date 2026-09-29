@@ -6,33 +6,13 @@
 
   <parent>
     <groupId>dev.example.corporate</groupId>
-    <artifactId>corporate-bom</artifactId>
-    <version>1.0.0</version>
-    <!-- Maven busca el parent en los repositorios, no en ../pom.xml -->
-    <relativePath/>
+    <artifactId>corporate</artifactId>
+    <version>${revision}</version>
   </parent>
 
   <artifactId>corporate-parent</artifactId>
   <packaging>pom</packaging>
-  <name>Spring Boot 2.7 Java 8 corporate parent</name>
-
-  <organization>
-    <name>Example Organisation</name>
-    <url>https://example.invalid</url>
-  </organization>
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-  <scm>
-    <connection>scm:git:https://example.invalid/example/corporate-pom.git</connection>
-    <developerConnection>scm:git:https://example.invalid/example/corporate-pom.git</developerConnection>
-    <url>https://example.invalid/example/corporate-pom</url>
-    <tag>HEAD</tag>
-  </scm>
+  <name>Parent Spring Boot 2.7 Java 8</name>
 
   <properties>
     <maven.compiler.source>1.8</maven.compiler.source>
@@ -43,6 +23,18 @@
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
   </properties>
+
+  <dependencyManagement>
+    <dependencies>
+      <dependency>
+        <groupId>dev.example.corporate</groupId>
+        <artifactId>corporate-bom</artifactId>
+        <version>${project.version}</version>
+        <type>pom</type>
+        <scope>import</scope>
+      </dependency>
+    </dependencies>
+  </dependencyManagement>
 
   <build>
     <pluginManagement>
