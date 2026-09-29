@@ -4,9 +4,14 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>dev.example</groupId>
+  <parent>
+    <groupId>dev.example.corporate</groupId>
+    <artifactId>corporate-bom</artifactId>
+    <version>1.0.0</version>
+    <relativePath/>
+  </parent>
+
   <artifactId>corporate-parent</artifactId>
-  <version>1.0.0</version>
   <packaging>pom</packaging>
   <name>Spring Boot 2.7 Java 8 corporate parent</name>
 
@@ -33,37 +38,10 @@
     <maven.compiler.target>1.8</maven.compiler.target>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
-    <!-- BOM imports do not expose properties to this POM. -->
-    <spring-boot.version>2.7.18</spring-boot.version>
     <maven-compiler-plugin.version>3.10.1</maven-compiler-plugin.version>
     <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
     <maven-surefire-plugin.version>2.22.2</maven-surefire-plugin.version>
   </properties>
-
-  <dependencyManagement>
-    <dependencies>
-      <dependency>
-        <groupId>dev.example.build</groupId>
-        <artifactId>corporate-bom</artifactId>
-        <version>1.0.0</version>
-        <type>pom</type>
-        <scope>import</scope>
-      </dependency>
-    </dependencies>
-  </dependencyManagement>
-
-  <distributionManagement>
-    <repository>
-      <id>nexus-releases</id>
-      <name>Nexus hosted Maven releases</name>
-      <url>${env.NEXUS_RELEASES_URL}</url>
-    </repository>
-    <snapshotRepository>
-      <id>nexus-snapshots</id>
-      <name>Nexus hosted Maven snapshots</name>
-      <url>${env.NEXUS_SNAPSHOTS_URL}</url>
-    </snapshotRepository>
-  </distributionManagement>
 
   <build>
     <pluginManagement>

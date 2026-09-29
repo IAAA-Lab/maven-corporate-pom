@@ -4,7 +4,7 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <groupId>dev.example.build</groupId>
+  <groupId>dev.example.corporate</groupId>
   <artifactId>corporate-bom</artifactId>
   <version>1.0.0</version>
   <packaging>pom</packaging>
@@ -29,7 +29,7 @@
     <dependencies>
       <!-- Explicit company choices precede imported BOMs: dependency management is first-wins. -->
       <dependency>
-        <groupId>dev.example</groupId>
+        <groupId>dev.example.greeting</groupId>
         <artifactId>greeting</artifactId>
         <version>2.0.0</version>
       </dependency>

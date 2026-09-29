@@ -5,12 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>dev.example</groupId>
+    <groupId>dev.example.corporate</groupId>
     <artifactId>corporate-parent</artifactId>
     <version>1.0.0</version>
     <relativePath/>
   </parent>
 
+  <groupId>dev.example.greeting</groupId>
   <artifactId>greeting-app</artifactId>
   <version>0.1.0</version>
   <name>Greeting application</name>
@@ -21,7 +22,7 @@
       <artifactId>spring-boot-starter</artifactId>
     </dependency>
     <dependency>
-      <groupId>dev.example</groupId>
+      <groupId>dev.example.greeting</groupId>
       <artifactId>greeting</artifactId>
     </dependency>
     <dependency>

@@ -3,32 +3,41 @@
 Runnable example of a company Maven platform for **Spring Boot 2.7.18** and
 **Java 8**. It separates two jobs:
 
-- `corporate-bom` is an importable dependency catalogue.
-- `corporate-parent` is inherited build policy.
+- `corporate-bom` is the version catalogue (`spring-boot-dependencies` in
+  Spring Boot).
+- `corporate-parent` is build policy on top of that catalogue
+  (`spring-boot-starter-parent` in Spring Boot).
 
-This git repository holds **three Maven projects**, not one reactor:
+This git repository holds **four independent Maven projects**, not a reactor:
 
-1. Corporate platform (`pom.xml` plus `corporate-bom` and `corporate-parent`).
-2. `greeting`.
-3. `greeting-app`.
+1. `corporate-bom`
+2. `corporate-parent`
+3. `greeting`
+4. `greeting-app`
+
+There is no root `pom.xml`. Both platform artifacts are version **1.0.0**.
+Deploy the BOM first, then the parent, so `corporate-parent` can resolve
+`corporate-bom` from Nexus the same way `spring-boot-starter-parent` resolves
+`spring-boot-dependencies`.
 
 Nexus OSS in Compose is the only registry. Platform artifacts deploy to
 `maven-releases`. Product artifacts deploy to a separate hosted repository,
 `products-releases`. Consumers resolve both through the `maven-public` group,
 which also proxies Maven Central.
 
-## Maven modules
+Coordinates follow the same split. Platform artifacts use groupId
+`dev.example.corporate`. Greeting library and application use
+`dev.example.greeting`. A child inherits its parent's groupId unless it
+declares its own, so the greeting projects set `<groupId>` explicitly.
 
-`<modules>` still makes sense **inside the corporate project**. The BOM and
-parent are two artifacts of one lockstep platform. An aggregator is how Maven
-builds and deploys them together without making either one the parent of the
-other.
+## Independent Maven projects
 
-`<modules>` does **not** belong at the repository root spanning greeting or
-greeting-app. Those are independent Maven projects. If they were reactor
-modules, Maven would resolve `corporate-parent` from the filesystem and the
-Nexus story would be fake. Empty `<relativePath/>` is what forces the parent
-to come from Nexus.
+Each directory is its own Maven build. Empty `<relativePath/>` skips a sibling
+`pom.xml`. `greeting-app/.mvn/maven.config` passes
+`settings/nexus-settings.xml`, so `corporate-parent` is resolved from the
+Nexus `maven-public` group (which includes `maven-releases`), not from Maven
+Central. That is the same idea as resolving `spring-boot-starter-parent`
+from Central, with Nexus as this company's Central.
 
 ## Run it
 
@@ -39,9 +48,10 @@ Docker-in-Docker are installed, then:
 ./scripts/demo.sh
 ```
 
-That starts Nexus, publishes the platform to `maven-releases`, publishes
-`greeting` to `products-releases`, then runs the application tests after
-clearing `~/.m2` so both the parent and the library are fetched from Nexus.
+That starts Nexus, publishes `corporate-bom` then `corporate-parent` to
+`maven-releases`, publishes `greeting` to `products-releases`, then runs the
+application tests after clearing `~/.m2` so the parent, BOM, and library are
+fetched from Nexus.
 
 The test starts the Spring Boot application context and checks:
 
@@ -52,75 +62,79 @@ Hello, Codespaces
 Inspect the effective model of the application project:
 
 ```bash
-export NEXUS_PASSWORD=admin123
-export NEXUS_PRODUCTS_RELEASES_URL=http://127.0.0.1:8081/repository/products-releases/
-export NEXUS_PRODUCTS_SNAPSHOTS_URL=http://127.0.0.1:8081/repository/products-snapshots/
-mvn -f greeting-app/pom.xml --settings settings/nexus-settings.xml \
-  help:effective-pom -Doutput=target/effective-pom.xml
+mvn -f greeting-app/pom.xml help:effective-pom \
+  -Doutput=target/effective-pom.xml
 ```
 
-`mvn test` at the repository root only builds the corporate aggregator. It
-does not build greeting or greeting-app.
+`greeting-app/.mvn/maven.config` already selects the Nexus settings. Set
+`NEXUS_PASSWORD` if you are not in the Codespace (the dev container exports
+it). There is nothing to build at the repository root.
 
 ## Confirm that the corporate BOM is used
 
 The application deliberately omits `<version>` from both
 `spring-boot-starter` and `greeting`. Maven would reject its model if the
-corporate parent did not import `corporate-bom`.
+parent chain did not include `corporate-bom`.
 
 Show the versions Maven actually resolved:
 
 ```bash
-export NEXUS_PASSWORD=admin123
-mvn -f greeting-app/pom.xml --settings settings/nexus-settings.xml \
-  dependency:tree \
-  -Dincludes=dev.example:greeting,org.springframework.boot:spring-boot-starter
+mvn -f greeting-app/pom.xml dependency:tree \
+  -Dincludes=dev.example.greeting:greeting,org.springframework.boot:spring-boot-starter
 ```
 
 The relevant result is:
 
 ```text
 org.springframework.boot:spring-boot-starter:jar:2.7.18:compile
-dev.example:greeting:jar:2.0.0:compile
+dev.example.greeting:greeting:jar:2.0.0:compile
 ```
 
 `greeting-app/target/effective-pom.xml` contains those versions even though
-`greeting-app/pom.xml` does not. That is the observable effect of the BOM
-import. Parent-only effects are different: compiler and plugin configuration
-appear because `corporate-parent` is inherited, not because its BOM is
-imported.
+`greeting-app/pom.xml` does not. Greeting apps inherit `corporate-parent`;
+that parent inherits `corporate-bom`, as `spring-boot-starter-parent`
+inherits `spring-boot-dependencies`. Compiler and plugin configuration come
+from `corporate-parent`, not from the BOM.
 
 ## The chosen structure
 
 ```mermaid
 flowchart TD
-    corporate["corporate aggregator"]
-    bom["corporate-bom 1.0.0"]
-    parent["corporate-parent 1.0.0"]
-    library["greeting 2.0.0"]
-    app["greeting-app 0.1.0"]
+    bootBom["spring-boot-dependencies 2.7.18"]
+    subgraph releases["Nexus maven-releases"]
+        bom["dev.example.corporate:corporate-bom 1.0.0"]
+        parent["dev.example.corporate:corporate-parent 1.0.0"]
+    end
+    subgraph products["Nexus products-releases"]
+        library["dev.example.greeting:greeting 2.0.0"]
+        app["dev.example.greeting:greeting-app 0.1.0"]
+    end
 
-    corporate -->|"modules"| bom
-    corporate -->|"modules"| parent
-    bom -->|"import scope"| parent
-    parent -->|"parent, relativePath empty"| library
-    parent -->|"parent, relativePath empty"| app
+    bootBom -->|"import scope"| bom
+    bom -->|"parent from Nexus"| parent
+    parent -->|"parent from Nexus"| library
+    parent -->|"parent from Nexus"| app
     app -->|"dependency, no version"| library
 ```
 
-The BOM manages `greeting` and imports `spring-boot-dependencies` 2.7.18.
-The parent imports that BOM and supplies what an imported BOM cannot:
+The BOM manages `greeting` and **imports** `spring-boot-dependencies` 2.7.18
+(`scope` import). That is the Spring Boot catalogue pattern.
+
+`corporate-parent` does **not** import the corporate BOM. It uses it as
+`<parent>`, which is where `spring-boot-starter-parent` sits relative to
+`spring-boot-dependencies`. The parent then adds what a BOM does not:
 
 - Java 8 compiler settings and UTF-8.
 - Pinned compiler, test, enforcer, and Spring Boot Maven plugins.
 - Enforced Maven 3.6+ and Java 8+.
-- Nexus `distributionManagement` for the platform repositories.
 - Organisation, licence, and SCM metadata.
 
-The parent does **not** extend `spring-boot-starter-parent`. Maven permits one
-parent, and that slot is the company policy. Importing
-`spring-boot-dependencies` retains Spring Boot's dependency alignment, but not
-its plugin management.
+Deployment URLs for the platform are on `corporate-bom` and inherited.
+
+The parent does **not** extend `spring-boot-starter-parent`. Maven permits
+one parent. That slot is `corporate-bom`, then `corporate-parent` for
+applications. Boot versions still arrive because the BOM imports
+`spring-boot-dependencies`.
 
 `java.version` is a convention of the Spring Boot parent. It has no effect
 here. The corporate parent therefore sets `maven.compiler.source` and
@@ -132,23 +146,22 @@ Platform, managed dependency, and product versions are independent.
 
 ```mermaid
 flowchart LR
-    platform["Platform 1.0.0"]
     bom["corporate-bom 1.0.0"]
     parent["corporate-parent 1.0.0"]
     boot["Spring Boot 2.7.18"]
     library["greeting 2.0.0"]
     product["greeting-app 0.1.0"]
 
-    platform --> bom
-    platform --> parent
+    bom -->|"parent"| parent
     bom -->|"manages"| boot
     bom -->|"manages"| library
-    parent -->|"build policy"| product
+    parent -->|"parent"| library
+    parent -->|"parent"| product
     product -->|"uses managed version"| library
 ```
 
-- **Platform version:** the BOM and parent are released together with the same
-  version. Applications select a platform by changing their parent version.
+- **Platform version:** BOM and parent are released with the same version.
+  Applications select a platform by changing their parent version.
 - **Managed versions:** the BOM pins Spring Boot and approved internal
   libraries. They do not have to match the platform version.
 - **Product versions:** every library and application declares its own
@@ -170,9 +183,8 @@ flowchart LR
     newPlatform -->|"explicit parent bump"| upgradedApp
 ```
 
-A BOM import does not expose its properties to the importing POM, so
-`spring-boot.version` appears in the BOM for its dependency import and in the
-parent for plugin management.
+`spring-boot.version` lives on `corporate-bom`. `corporate-parent` inherits it
+for plugin management because the BOM is its parent, not an import.
 
 ## Repository roles
 
@@ -180,20 +192,23 @@ One Nexus instance, two hosted Maven repositories, one group for consumption.
 
 ```mermaid
 flowchart LR
-    maven["Maven build"]
+    app["greeting-app"]
+    mvnConfig[".mvn/maven.config"]
     settings["settings/nexus-settings.xml"]
-    publicGroup["maven-public group"]
+    publicGroup["maven-public"]
     central["Maven Central"]
     corporateHosted["maven-releases"]
     productHosted["products-releases"]
 
-    maven -->|"mirrorOf central"| settings
-    settings --> publicGroup
+    app --> mvnConfig
+    mvnConfig --> settings
+    settings -->|"mirrorOf central"| publicGroup
     publicGroup --> central
     publicGroup --> corporateHosted
     publicGroup --> productHosted
-    maven -->|"deploy platform"| corporateHosted
-    maven -->|"deploy products"| productHosted
+    app -->|"resolves corporate-parent"| corporateHosted
+    app -->|"resolves greeting"| productHosted
+    app -->|"mvn deploy"| productHosted
 ```
 
 `settings/nexus-settings.xml` mirrors Maven Central to `maven-public`, which
@@ -234,8 +249,9 @@ flowchart TD
 
 This provides company rules and all Boot parent defaults through one chain.
 It is valid and often convenient, but couples each corporate-parent release
-line to one Boot line. The chosen design makes the imported dependency
-catalogue and explicit plugin policy visible instead.
+line to one Boot line. The chosen design uses Spring's chain
+(catalogue POM, then policy POM, then the app) with `corporate-bom` in
+the `spring-boot-dependencies` slot, not `spring-boot-starter-parent`.
 
 ### Corporate BOM only
 

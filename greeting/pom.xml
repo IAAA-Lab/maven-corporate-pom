@@ -5,12 +5,13 @@
   <modelVersion>4.0.0</modelVersion>
 
   <parent>
-    <groupId>dev.example</groupId>
+    <groupId>dev.example.corporate</groupId>
     <artifactId>corporate-parent</artifactId>
     <version>1.0.0</version>
     <relativePath/>
   </parent>
 
+  <groupId>dev.example.greeting</groupId>
   <artifactId>greeting</artifactId>
   <version>2.0.0</version>
   <name>Greeting library</name>

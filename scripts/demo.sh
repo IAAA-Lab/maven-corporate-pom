@@ -1,6 +1,6 @@
 #!/bin/sh
-# Three independent Maven projects, one git repo, one Nexus.
-# Platform POMs go to maven-releases; products go to products-releases.
+# Four independent Maven projects, one git repo, one Nexus.
+# Platform POMs go to maven-releases; greeting products go to products-releases.
 set -eu
 
 ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
@@ -17,17 +17,18 @@ SETTINGS="$ROOT/settings/nexus-settings.xml"
 MVN="mvn --batch-mode --no-transfer-progress --settings $SETTINGS"
 
 wipe_local() {
-  rm -rf "${HOME}/.m2/repository/dev/example/corporate-parent"
-  rm -rf "${HOME}/.m2/repository/dev/example.build/corporate-bom"
-  rm -rf "${HOME}/.m2/repository/dev/example/greeting"
-  rm -rf "${HOME}/.m2/repository/dev/example/greeting-app"
+  rm -rf "${HOME}/.m2/repository/dev/example"
 }
 
 docker compose up -d
 "$ROOT/scripts/bootstrap-nexus.sh"
 
-echo "Deploying corporate BOM and parent to maven-releases"
-$MVN -f "$ROOT/pom.xml" deploy
+echo "Deploying corporate-bom to maven-releases"
+$MVN -f "$ROOT/corporate-bom/pom.xml" deploy
+
+wipe_local
+echo "Deploying corporate-parent to maven-releases (BOM resolved from Nexus)"
+$MVN -f "$ROOT/corporate-parent/pom.xml" deploy
 
 wipe_local
 echo "Deploying greeting to products-releases (parent resolved from Nexus)"
@@ -38,4 +39,4 @@ echo "Testing and deploying greeting-app (parent and greeting resolved from Nexu
 $MVN -f "$ROOT/greeting-app/pom.xml" test
 $MVN -f "$ROOT/greeting-app/pom.xml" deploy
 
-echo "demo.sh finished: platform in maven-releases, products in products-releases"
+echo "demo.sh finished: platform in maven-releases, greeting products in products-releases"
