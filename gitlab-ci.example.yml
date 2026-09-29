@@ -1,0 +1,35 @@
+image: maven:3.9.9-eclipse-temurin-8
+
+stages:
+  - verify
+  - publish
+
+variables:
+  MAVEN_ARGS: "--batch-mode --no-transfer-progress --settings settings/ci-settings.xml"
+
+verify:
+  stage: verify
+  script:
+    - mvn $MAVEN_ARGS verify
+  rules:
+    - if: '$CI_PIPELINE_SOURCE == "merge_request_event"'
+    - if: '$CI_COMMIT_BRANCH && $CI_COMMIT_BRANCH != $CI_DEFAULT_BRANCH'
+
+publish-snapshot:
+  stage: publish
+  script:
+    - VERSION="$(mvn $MAVEN_ARGS help:evaluate -Dexpression=project.version -q -DforceStdout)"
+    - 'case "$VERSION" in *-SNAPSHOT) ;; *) echo "Default branch must carry a snapshot version"; exit 1;; esac'
+    - mvn $MAVEN_ARGS deploy
+  rules:
+    - if: '$CI_COMMIT_BRANCH == $CI_DEFAULT_BRANCH'
+
+publish-release:
+  stage: publish
+  script:
+    - VERSION="$(mvn $MAVEN_ARGS help:evaluate -Dexpression=project.version -q -DforceStdout)"
+    - 'case "$VERSION" in *-SNAPSHOT) echo "Release versions must be immutable"; exit 1;; esac'
+    - 'test "$CI_COMMIT_TAG" = "v$VERSION" || { echo "Tag must equal v$VERSION"; exit 1; }'
+    - mvn $MAVEN_ARGS deploy
+  rules:
+    - if: '$CI_COMMIT_TAG =~ /^v[0-9]+\.[0-9]+\.[0-9]+$/'

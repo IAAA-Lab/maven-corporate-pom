@@ -1,0 +1,5 @@
+{
+  "name": "Corporate Maven platform (Java 8)",
+  "image": "mcr.microsoft.com/devcontainers/java:8-bookworm",
+  "postCreateCommand": "java -version && mvn -version"
+}
