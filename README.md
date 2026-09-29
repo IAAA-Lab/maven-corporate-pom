@@ -1,118 +1,99 @@
-# Corporate parent and BOM with Spring Boot 2.7
+# Parent y BOM corporativos con Spring Boot 2.7
 
-Runnable example of a company Maven platform for **Spring Boot 2.7.18** and
-**Java 8**. It separates two jobs:
+Ejemplo de plataforma Maven de empresa: **Spring Boot 2.7.18** y **Java 8**.
+Dos artefactos distintos:
 
-- `corporate-bom` is the version catalogue (`spring-boot-dependencies` in
+- `corporate-bom` es el catálogo de versiones (`spring-boot-dependencies` en
   Spring Boot).
-- `corporate-parent` is build policy on top of that catalogue
-  (`spring-boot-starter-parent` in Spring Boot).
+- `corporate-parent` es la política de build sobre ese catálogo
+  (`spring-boot-starter-parent` en Spring Boot).
 
-This git repository holds **four independent Maven projects**, not a reactor:
+Cadena de **parent**:
+
+`greeting-app` / `greeting` → `corporate-parent` → `corporate-bom`
+
+Es el mismo esquema que Spring Boot:
+
+aplicación → `spring-boot-starter-parent` → `spring-boot-dependencies`
+
+Cada POM tiene un solo parent. `greeting` y `greeting-app` declaran
+`corporate-parent`. Ese POM declara `corporate-bom` (solo catálogo de
+versiones) y le añade compiler, enforcer y plugins. Dos saltos, como Spring
+Boot: la app no declara el catálogo; declara el parent de política, y ese
+declara el catálogo. `spring-boot-starter-parent` tampoco está fundido con
+`spring-boot-dependencies`.
+
+Este git tiene **cuatro proyectos Maven independientes**:
 
 1. `corporate-bom`
 2. `corporate-parent`
 3. `greeting`
 4. `greeting-app`
 
-There is no root `pom.xml`. Both platform artifacts are version **1.0.0**.
-Deploy the BOM first, then the parent, so `corporate-parent` can resolve
-`corporate-bom` from Nexus the same way `spring-boot-starter-parent` resolves
-`spring-boot-dependencies`.
+BOM y parent se publican como **1.0.0**. `corporate-parent`, `greeting` y
+`greeting-app` dejan `<relativePath/>` vacío: Maven pide el parent a Nexus,
+no a `../pom.xml`. El BOM hay que publicarlo antes que el parent (si no, el
+build de `corporate-parent` no encuentra `corporate-bom`). Luego, el mismo
+orden para greeting: parent ya en Nexus.
 
-Nexus OSS in Compose is the only registry. Every company artifact — platform
-and products — deploys to one hosted repository,
-`internal-artifact-releases`. Public imports such as Spring Boot live in a
-different repository: the `maven-central` proxy. Consumers resolve both
-through the `maven-public` group.
+## Settings de usuario: dónde se leen los artefactos
 
-Coordinates still split by origin. Platform artifacts use groupId
-`dev.example.corporate`. Greeting library and application use
-`dev.example.greeting`. A child inherits its parent's groupId unless it
-declares its own, so the greeting projects set `<groupId>` explicitly.
+El `settings.xml` de cada desarrollador separa **externos** e **internos**.
+No hay un group que mezcle ambos.
 
-## Independent Maven projects
+- **Externos:** `mirrorOf` de `central` hacia el group `maven-public`
+  (Compose, puerto 8081). Ese group solo tiene el proxy `maven-central`.
+  Lo que Maven pediría a Maven Central va ahí.
+- **Internos:** un profile activo con el group `maven-internal` (los dos
+  hosted de empresa). El parent con `<relativePath/>` vacío y las
+  librerías `dev.example.*` salen de esa URL, no de `maven-public`.
 
-Each directory is its own Maven build. Maven’s default parent lookup is
-**not** the repository: it is the file `../pom.xml`. `<relativePath/>` with
-no value disables that checkout search, so Maven uses the local cache and
-then Nexus (`maven-public`), the same way an app finds
-`spring-boot-starter-parent` on Central. A non-empty
-`<relativePath>../corporate-parent/pom.xml</relativePath>` would read the
-sibling on disk and skip the registry.
+El deploy **no** usa ningún group: usa las URL de `<distributionManagement>`
+(hosted `internal-artifact-releases`). Un group de Nexus no admite
+`mvn deploy`.
 
-Maven’s default user settings file is `~/.m2/settings.xml`, which cannot
-live in git. This repo keeps one file, `settings/nexus-settings.xml`.
-`./demo.sh` copies it to that default path, then a plain `mvn` command uses
-Nexus.
+El password no va escrito en git: en el settings está `${env.NEXUS_PASSWORD}`.
+El usuario del `<server>` es `admin` (fijo en el fichero de la demo).
 
-## Run it
+## Corporate-bom: catálogo de versiones y dónde se publica (`distributionManagement`)
 
-Open this repository in a Codespace. Rebuild the container so Maven 3.9.9 and
-Docker-in-Docker are installed, then:
+La publicación se declara en `<distributionManagement>` del POM de
+`corporate-bom`; `corporate-parent`, `greeting` y `greeting-app` lo heredan.
+
+El `<id>` (`nexus-internal-releases`) coincide con un `<server>` del
+settings (usuario `admin`, password interpolado). Las URL son
+`${env.NEXUS_INTERNAL_RELEASES_URL}` y la de snapshots; Maven las interpola
+al hacer deploy. El POM que queda en Nexus lleva ya la URL concreta, no la
+variable.
+
+## Demostración
+
+Codespace, reconstruir el contenedor (Maven 3.9.9 y Docker-in-Docker) y:
 
 ```bash
 ./demo.sh
 ```
 
-That copies `settings/nexus-settings.xml` to `~/.m2/settings.xml`, starts
-Nexus, publishes all four projects to `internal-artifact-releases`, then
-runs the application tests after clearing `~/.m2` so the parent, BOM, and
-library are fetched from Nexus (Spring Boot still comes from the
-`maven-central` proxy).
+El settings de usuario por defecto es `~/.m2/settings.xml`.
+El repo guarda `settings/nexus-settings.xml`. `./demo.sh` lo copia ahí para que 
+`mvn` pueda usar Nexus para consumir artefactos.
 
-If this Codespace already ran an older demo that used `maven-releases` and
-`products-releases`, recreate the volume (`docker compose down -v`) so Nexus
-starts empty.
+Después arranca Nexus y hace deploy, en este orden, a
+`internal-artifact-releases`: `corporate-bom`, `corporate-parent`,
+`greeting`. Entre un deploy y el siguiente borra
+`~/.m2/repository/dev/example` para que el parent y el BOM no salgan del
+disco. Luego los tests de `greeting-app` (parent, BOM y librería por
+`maven-internal`; Spring Boot por `maven-public` → proxy `maven-central`).
+Al final, deploy de `greeting-app` con `-DskipTests`.
 
-The test starts the Spring Boot application context and checks:
+`greeting` y `greeting-app` declaran `groupId` `dev.example.greeting`. Si no,
+heredarían `dev.example.corporate` del parent.
 
-```text
-Hello, Codespaces
-```
-
-Inspect the effective model of the application project:
-
-```bash
-mvn -f greeting-app/pom.xml help:effective-pom \
-  -Doutput=target/effective-pom.xml
-```
-
-After `./demo.sh`, `~/.m2/settings.xml` already mirrors Central to Nexus. Set
-`NEXUS_PASSWORD` if you are not in the Codespace (the dev container exports
-it). There is no root `pom.xml`; the four Maven projects stay independent.
-
-## Confirm that the corporate BOM is used
-
-The application deliberately omits `<version>` from both
-`spring-boot-starter` and `greeting`. Maven would reject its model if the
-parent chain did not include `corporate-bom`.
-
-Show the versions Maven actually resolved:
-
-```bash
-mvn -f greeting-app/pom.xml dependency:tree \
-  -Dincludes=dev.example.greeting:greeting,org.springframework.boot:spring-boot-starter
-```
-
-The relevant result is:
-
-```text
-org.springframework.boot:spring-boot-starter:jar:2.7.18:compile
-dev.example.greeting:greeting:jar:2.0.0:compile
-```
-
-`greeting-app/target/effective-pom.xml` contains those versions even though
-`greeting-app/pom.xml` does not. Greeting apps inherit `corporate-parent`;
-that parent inherits `corporate-bom`, as `spring-boot-starter-parent`
-inherits `spring-boot-dependencies`. Compiler and plugin configuration come
-from `corporate-parent`, not from the BOM.
-
-## The chosen structure
+## Estructura elegida
 
 ```mermaid
 flowchart BT
-    subgraph external["Nexus maven-central (public proxy)"]
+    subgraph external["Nexus maven-central (proxy público)"]
         bootBom["spring-boot-dependencies 2.7.18"]
     end
     subgraph internal["Nexus internal-artifact-releases"]
@@ -123,39 +104,16 @@ flowchart BT
     end
 
     bom -->|"import scope"| bootBom
-    parent -->|"parent from Nexus"| bom
-    library -->|"parent from Nexus"| parent
-    app -->|"parent from Nexus"| parent
-    app -->|"dependency, no version"| library
+    parent -->|"parent desde Nexus"| bom
+    library -->|"parent desde Nexus"| parent
+    app -->|"parent desde Nexus"| parent
+    app -->|"dependency, sin version"| library
 ```
 
-The BOM manages `greeting` and **imports** `spring-boot-dependencies` 2.7.18
-(`scope` import). That is the Spring Boot catalogue pattern.
+## Versionado
 
-`corporate-parent` does **not** import the corporate BOM. It uses it as
-`<parent>`, which is where `spring-boot-starter-parent` sits relative to
-`spring-boot-dependencies`. The parent then adds what a BOM does not:
-
-- Java 8 compiler settings and UTF-8.
-- Pinned compiler, test, enforcer, and Spring Boot Maven plugins.
-- Enforced Maven 3.6+ and Java 8+.
-- Organisation, licence, and SCM metadata.
-
-Deployment URLs for every company artifact are on `corporate-bom` and
-inherited. Greeting projects do not declare a separate product repository.
-
-The parent does **not** extend `spring-boot-starter-parent`. Maven permits
-one parent. That slot is `corporate-bom`, then `corporate-parent` for
-applications. Boot versions still arrive because the BOM imports
-`spring-boot-dependencies`.
-
-`java.version` is a convention of the Spring Boot parent. It has no effect
-here. The corporate parent therefore sets `maven.compiler.source` and
-`maven.compiler.target` to `1.8`.
-
-## Versioning
-
-Platform, managed dependency, and product versions are independent.
+Versión de plataforma, versiones gestionadas y versión de producto son
+independientes.
 
 ```mermaid
 flowchart LR
@@ -170,148 +128,72 @@ flowchart LR
     bom -->|"manages"| library
     library -->|"parent"| parent
     product -->|"parent"| parent
-    product -->|"uses managed version"| library
+    product -->|"usa versión gestionada"| library
 ```
 
-- **Platform version:** BOM and parent are released with the same version.
-  Applications select a platform by changing their parent version.
-- **Managed versions:** the BOM pins Spring Boot and approved internal
-  libraries. They do not have to match the platform version.
-- **Product versions:** every library and application declares its own
-  version. Otherwise it would inherit the platform version and be published
-  as though it were the platform.
+- **Plataforma:** BOM y parent salen con la misma versión. La aplicación
+  elige plataforma cambiando la versión del parent.
+- **Gestionadas:** el BOM fija Spring Boot y librerías internas aprobadas. No
+  tienen que coincidir con la versión de plataforma.
+- **Producto:** cada librería y aplicación declara su versión. Si no, heredaría
+  la de la plataforma y se publicaría como si fuera la plataforma.
 
-Changing the Spring Boot line requires a new platform release. Existing
-applications do not float to it:
+Cambiar la línea de Spring Boot exige un release nuevo de plataforma. Las
+apps ya publicadas no se actualizan solas:
 
 ```mermaid
 flowchart LR
     oldApp["App parent 1.0.0"]
-    oldPlatform["Platform 1.0.0: Boot 2.7.18"]
-    newPlatform["Platform 1.1.0: revised catalogue"]
+    oldPlatform["Plataforma 1.0.0: Boot 2.7.18"]
+    newPlatform["Plataforma 1.1.0: catálogo nuevo"]
     upgradedApp["App parent 1.1.0"]
 
     oldApp -->|"parent"| oldPlatform
     upgradedApp -->|"parent"| newPlatform
-    oldPlatform -->|"new platform release"| newPlatform
+    oldPlatform -->|"nuevo release de plataforma"| newPlatform
 ```
 
-`spring-boot.version` lives on `corporate-bom`. `corporate-parent` inherits it
-for plugin management because the BOM is its parent, not an import.
+`spring-boot.version` está en `corporate-bom`. `corporate-parent` lo hereda
+para pluginManagement porque el BOM es su parent, no un import.
 
-## Repository roles
+## Repositorios
 
-One Nexus instance, two repositories that matter, one group for consumption:
-hosted **internal** artifacts versus the **public** Central proxy.
+Nexus OSS trae de serie el group `maven-public` (con hosted vacíos de
+ejemplo más el proxy `maven-central`). Esta demo deja `maven-public` **solo**
+con `maven-central`: es el group de **externos**. Añade dos hosted de
+empresa y el group `maven-internal` con esos miembros, en este orden:
+`internal-artifact-releases`, `internal-artifact-snapshots`. Eso es el
+group de **internos**.
+
+Los groups son URL de lectura. El proxy `maven-central` es quien habla con
+Maven Central en internet. El deploy escribe en el hosted
+(`distributionManagement`), no en `maven-internal`.
 
 ```mermaid
-flowchart LR
+flowchart TB
     app["greeting-app"]
-    userSettings["~/.m2/settings.xml"]
-    publicGroup["maven-public"]
-    centralProxy["maven-central"]
-    central["Maven Central"]
-    internalHosted["internal-artifact-releases"]
+    settings["~/.m2/settings.xml"]
 
-    app --> userSettings
-    userSettings -->|"mirrorOf central"| publicGroup
-    publicGroup --> centralProxy
-    publicGroup --> internalHosted
-    centralProxy -->|"proxy"| central
-    app -->|"resolves Spring Boot"| centralProxy
-    app -->|"resolves corporate-parent, greeting"| internalHosted
-    app -->|"mvn deploy"| internalHosted
+    subgraph nexus["Nexus"]
+        subgraph pub["group maven-public — externos"]
+            proxy["proxy maven-central"]
+        end
+        subgraph intern["group maven-internal — internos"]
+            hostedRel["hosted internal-artifact-releases"]
+            hostedSnap["hosted internal-artifact-snapshots"]
+        end
+    end
+
+    internet["Maven Central"]
+
+    app --> settings
+    settings -->|"mirrorOf central"| pub
+    settings -->|"repositorio maven-internal"| intern
+    proxy -->|"origen remoto"| internet
+    app -->|"deploy: distributionManagement"| hostedRel
 ```
 
-`./demo.sh` copies `settings/nexus-settings.xml` to `~/.m2/settings.xml`.
-That file mirrors Maven Central to `maven-public`. The group members are
-`internal-artifact-releases` (company BOM, parent, libraries, applications)
-and `maven-central` (cached public artifacts such as Spring Boot). Deploy
-credentials are `NEXUS_PASSWORD`. URLs in `distributionManagement` are
-environment variables, not frozen hostnames inside released POMs.
-
-`scripts/provision-nexus.sh` creates `internal-artifact-releases` /
-`internal-artifact-snapshots` and points `maven-public` at those hosted
-repos plus the existing `maven-central` proxy. Redeploy of the same release
-version is allowed so `./demo.sh` can be repeated.
-
-## Alternatives
-
-### Spring Boot is the only parent
-
-```mermaid
-flowchart BT
-    bootParent["spring-boot-starter-parent"]
-    app["application"]
-    app -->|"parent"| bootParent
-```
-
-This is smallest for an independent service. Java defaults, dependency
-management, and Boot plugin defaults arrive together. Company enforcer rules,
-deployment settings, and metadata must be repeated or omitted.
-
-### Corporate parent extends the Spring Boot parent
-
-```mermaid
-flowchart BT
-    bootParent["spring-boot-starter-parent"]
-    corporateParent["corporate-parent"]
-    app["application"]
-    corporateParent -->|"parent"| bootParent
-    app -->|"parent"| corporateParent
-```
-
-This provides company rules and all Boot parent defaults through one chain.
-It is valid and often convenient, but couples each corporate-parent release
-line to one Boot line. The chosen design uses Spring's chain
-(catalogue POM, then policy POM, then the app) with `corporate-bom` in
-the `spring-boot-dependencies` slot, not `spring-boot-starter-parent`.
-
-### Corporate BOM only
-
-```mermaid
-flowchart BT
-    bootParent["spring-boot-starter-parent"]
-    app["application"]
-    corporateBom["corporate-bom"]
-    app -->|"parent"| bootParent
-    app -->|"import scope"| corporateBom
-```
-
-Use this when an application cannot change its parent. Internal versions stay
-aligned, but company compiler rules, enforcer rules, metadata, and deployment
-settings are not inherited.
-
-### Repository URLs in the POM
-
-```mermaid
-flowchart LR
-    pom["project pom.xml"]
-    registry["company Maven registry"]
-    pom -->|"repositories"| registry
-```
-
-A checkout can then resolve artifacts without company `settings.xml`. The URL
-is frozen into every released POM, and a `mirrorOf *` setting would redirect
-it. The chosen design treats registry locations as environment configuration.
-
-### One POM used as parent and BOM
-
-```mermaid
-flowchart BT
-    onePom["corporate-platform pom"]
-    inherited["application inheriting it"]
-    imported["application importing it"]
-    inherited -->|"parent"| onePom
-    imported -->|"BOM import"| onePom
-```
-
-This publishes fewer artifacts, but the two consumers receive different
-things. Parent inheritance includes build policy; import includes only
-`dependencyManagement`. Separate artifacts make that boundary explicit and
-keep the catalogue usable without inheriting company build behavior.
-
-## Sources
+## Fuentes
 
 - [Spring Boot Maven plugin: using Boot without its parent](https://docs.spring.io/spring-boot/docs/2.7.18/maven-plugin/reference/htmlsingle/#using-boot)
 - [Maven settings reference](https://maven.apache.org/settings.html)

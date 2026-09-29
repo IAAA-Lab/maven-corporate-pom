@@ -1,6 +1,6 @@
 #!/bin/sh
-# Create internal hosted Maven repos and attach them to maven-public. Idempotent.
-# Public artifacts (Spring Boot, …) stay on the maven-central proxy.
+# Hosted internos + group maven-internal. maven-public queda solo con el proxy
+# maven-central (externos). Idempotente.
 set -eu
 
 NEXUS_URL=${NEXUS_URL:-http://127.0.0.1:8081}
@@ -38,7 +38,7 @@ ensure_hosted() {
   policy=$2
   code=$(http_code GET "/repositories/maven/hosted/$name")
   if [ "$code" = "200" ]; then
-    echo "  Nexus hosted repository already exists: $name"
+    echo "  El hosted de Nexus ya existe: $name"
     return 0
   fi
   body=$(cat <<EOF
@@ -47,9 +47,9 @@ EOF
 )
   code=$(http_code POST "/repositories/maven/hosted" "$body")
   case "$code" in
-    200|201|204) echo "  Created Nexus hosted repository: $name" ;;
+    200|201|204) echo "  Creado hosted de Nexus: $name" ;;
     *)
-      echo "Could not create $name: HTTP $code" >&2
+      echo "No se ha podido crear $name: HTTP $code" >&2
       cat "$TMP" >&2
       echo >&2
       return 1
@@ -66,28 +66,49 @@ EOF
 )
   code=$(http_code PUT "/repositories/maven/hosted/$name" "$body")
   case "$code" in
-    200|204) echo "  Redeploy allowed on $name" ;;
-    *) echo "Could not allow redeploy on $name: HTTP $code" ;;
+    200|204) echo "  Redeploy permitido en $name" ;;
+    *) echo "No se ha podido permitir redeploy en $name: HTTP $code" ;;
+  esac
+}
+
+ensure_group() {
+  name=$1
+  members=$2
+  body=$(cat <<EOF
+{"name":"$name","online":true,"storage":{"blobStoreName":"default","strictContentTypeValidation":true},"group":{"memberNames":$members}}
+EOF
+)
+  code=$(http_code GET "/repositories/maven/group/$name")
+  if [ "$code" = "200" ]; then
+    code=$(http_code PUT "/repositories/maven/group/$name" "$body")
+    case "$code" in
+      200|204) echo "  Group $name actualizado" ;;
+      *)
+        echo "No se ha podido actualizar $name: HTTP $code" >&2
+        cat "$TMP" >&2
+        echo >&2
+        return 1
+        ;;
+    esac
+    return 0
+  fi
+  code=$(http_code POST "/repositories/maven/group" "$body")
+  case "$code" in
+    200|201|204) echo "  Creado group $name" ;;
+    *)
+      echo "No se ha podido crear $name: HTTP $code" >&2
+      cat "$TMP" >&2
+      echo >&2
+      return 1
+      ;;
   esac
 }
 
 ensure_hosted internal-artifact-releases RELEASE
 ensure_hosted internal-artifact-snapshots SNAPSHOT
 
-group_body=$(cat <<'EOF'
-{"name":"maven-public","online":true,"storage":{"blobStoreName":"default","strictContentTypeValidation":true},"group":{"memberNames":["internal-artifact-releases","internal-artifact-snapshots","maven-central"]}}
-EOF
-)
-code=$(http_code PUT "/repositories/maven/group/maven-public" "$group_body")
-case "$code" in
-  200|204) echo "  maven-public = internal hosted + maven-central (public proxy)" ;;
-  *)
-    echo "Could not update maven-public: HTTP $code" >&2
-    cat "$TMP" >&2
-    echo >&2
-    exit 1
-    ;;
-esac
+ensure_group maven-internal '["internal-artifact-releases","internal-artifact-snapshots"]'
+ensure_group maven-public '["maven-central"]'
 
 allow_redeploy internal-artifact-releases RELEASE
 allow_redeploy internal-artifact-snapshots SNAPSHOT

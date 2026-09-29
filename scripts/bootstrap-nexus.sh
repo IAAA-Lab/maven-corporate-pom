@@ -13,18 +13,18 @@ export NEXUS_PASSWORD=${NEXUS_PASSWORD:-admin123}
 
 if docker compose exec -T nexus test -f /nexus-data/admin.password; then
   OLD=$(docker compose exec -T nexus cat /nexus-data/admin.password | tr -d '\r\n')
-  echo "  Changing Nexus admin password from the generated first-boot value"
+  echo "  Cambiando el password de admin de Nexus (valor generado en el primer arranque)"
   curl -sf -u "admin:${OLD}" \
     -X PUT \
     -H "Content-Type: text/plain" \
     --data "$NEXUS_PASSWORD" \
     "$NEXUS_URL/service/rest/v1/security/users/admin/change-password"
-  echo "  Nexus admin password is now the value of NEXUS_PASSWORD"
+  echo "  El password de admin de Nexus es el valor de NEXUS_PASSWORD"
 else
-  echo "  First-boot password file is gone; checking NEXUS_PASSWORD against Nexus"
+  echo "  Ya no está el fichero de password del primer arranque; se comprueba NEXUS_PASSWORD"
   curl -sf -u "admin:${NEXUS_PASSWORD}" \
     "$NEXUS_URL/service/rest/v1/status" >/dev/null
-  echo "  Nexus accepted NEXUS_PASSWORD"
+  echo "  Nexus ha aceptado NEXUS_PASSWORD"
 fi
 
 "$ROOT/scripts/provision-nexus.sh"

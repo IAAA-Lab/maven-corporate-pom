@@ -12,6 +12,6 @@ class GreetingApplicationTest {
 
     @Test
     void usesTheVersionManagedGreetingLibrary() {
-        assertEquals("Hello, Codespaces", Greeting.hello("Codespaces"));
+        assertEquals("Hola, Codespaces", Greeting.hello("Codespaces"));
     }
 }
