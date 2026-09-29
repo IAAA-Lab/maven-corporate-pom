@@ -12,6 +12,9 @@ application has its own project and package registry.
 
 ## Run it
 
+Open this repository in a Codespace. The Java 8 image does not ship Maven, so the
+dev container installs Maven 3.9.9. Rebuild the container, then:
+
 ```bash
 mvn test
 ```
