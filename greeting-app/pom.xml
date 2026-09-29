@@ -8,6 +8,7 @@
     <groupId>dev.example.corporate</groupId>
     <artifactId>corporate-parent</artifactId>
     <version>1.0.0</version>
+    <!-- Tells Maven to look straight in the repositories -->
     <relativePath/>
   </parent>
 

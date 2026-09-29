@@ -40,11 +40,10 @@ then Nexus (`maven-public`), the same way an app finds
 `<relativePath>../corporate-parent/pom.xml</relativePath>` would read the
 sibling on disk and skip the registry.
 
-`settings/nexus-settings.xml` in this repo is the template. Maven’s default
-user settings file is `~/.m2/settings.xml`. `scripts/install-maven-settings.sh`
-copies the template there (Codespace `postCreateCommand` and `demo.sh` both
-run it). After that, a plain `mvn` command uses Nexus; no `.mvn/maven.config`
-and no `--settings` flag.
+Maven’s default user settings file is `~/.m2/settings.xml`, which cannot
+live in git. This repo keeps one file, `settings/nexus-settings.xml`.
+`./demo.sh` copies it to that default path, then a plain `mvn` command uses
+Nexus.
 
 ## Run it
 
@@ -52,13 +51,14 @@ Open this repository in a Codespace. Rebuild the container so Maven 3.9.9 and
 Docker-in-Docker are installed, then:
 
 ```bash
-./scripts/demo.sh
+./demo.sh
 ```
 
-That starts Nexus, publishes `corporate-bom` then `corporate-parent` to
-`maven-releases`, publishes `greeting` to `products-releases`, then runs the
-application tests after clearing `~/.m2` so the parent, BOM, and library are
-fetched from Nexus.
+That copies `settings/nexus-settings.xml` to `~/.m2/settings.xml`, starts
+Nexus, publishes `corporate-bom` then `corporate-parent` to `maven-releases`,
+publishes `greeting` to `products-releases`, then runs the application tests
+after clearing `~/.m2` so the parent, BOM, and library are fetched from
+Nexus.
 
 The test starts the Spring Boot application context and checks:
 
@@ -73,9 +73,9 @@ mvn -f greeting-app/pom.xml help:effective-pom \
   -Doutput=target/effective-pom.xml
 ```
 
-`~/.m2/settings.xml` already mirrors Central to Nexus. Set `NEXUS_PASSWORD`
-if you are not in the Codespace (the dev container exports it). There is
-nothing to build at the repository root.
+After `./demo.sh`, `~/.m2/settings.xml` already mirrors Central to Nexus. Set
+`NEXUS_PASSWORD` if you are not in the Codespace (the dev container exports
+it). There is no root `pom.xml`; the four Maven projects stay independent.
 
 ## Confirm that the corporate BOM is used
 
@@ -216,16 +216,16 @@ flowchart LR
     app -->|"mvn deploy"| productHosted
 ```
 
-The checked-in template `settings/nexus-settings.xml` is copied to
-`~/.m2/settings.xml`. That file mirrors Maven Central to `maven-public`,
-which already includes the hosted platform and product repositories. Deploy
-credentials are `NEXUS_PASSWORD`. URLs in `distributionManagement` are
-environment variables, not frozen hostnames inside released POMs.
+`./demo.sh` copies `settings/nexus-settings.xml` to `~/.m2/settings.xml`.
+That file mirrors Maven Central to `maven-public`, which already includes
+the hosted platform and product repositories. Deploy credentials are
+`NEXUS_PASSWORD`. URLs in `distributionManagement` are environment
+variables, not frozen hostnames inside released POMs.
 
 The default `maven-releases` / `maven-snapshots` pair holds the platform.
 `scripts/provision-nexus.sh` creates `products-releases` /
 `products-snapshots` and adds them to `maven-public`. Redeploy of the same
-release version is allowed so `./scripts/demo.sh` can be repeated.
+release version is allowed so `./demo.sh` can be repeated.
 
 ## Alternatives
 

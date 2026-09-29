@@ -3,7 +3,7 @@
 # Platform POMs go to maven-releases; greeting products go to products-releases.
 set -eu
 
-ROOT=$(CDPATH= cd -- "$(dirname -- "$0")/.." && pwd)
+ROOT=$(CDPATH= cd -- "$(dirname -- "$0")" && pwd)
 cd "$ROOT"
 
 export NEXUS_URL=${NEXUS_URL:-http://127.0.0.1:8081}
@@ -13,7 +13,9 @@ export NEXUS_SNAPSHOTS_URL=${NEXUS_SNAPSHOTS_URL:-$NEXUS_URL/repository/maven-sn
 export NEXUS_PRODUCTS_RELEASES_URL=${NEXUS_PRODUCTS_RELEASES_URL:-$NEXUS_URL/repository/products-releases/}
 export NEXUS_PRODUCTS_SNAPSHOTS_URL=${NEXUS_PRODUCTS_SNAPSHOTS_URL:-$NEXUS_URL/repository/products-snapshots/}
 
-"$ROOT/scripts/install-maven-settings.sh"
+mkdir -p "${HOME}/.m2"
+rm -f "${HOME}/.m2/settings.xml"
+cp "$ROOT/settings/nexus-settings.xml" "${HOME}/.m2/settings.xml"
 MVN="mvn --batch-mode --no-transfer-progress"
 
 wipe_local() {
