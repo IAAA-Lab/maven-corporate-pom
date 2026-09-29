@@ -19,7 +19,6 @@ MVN="mvn --batch-mode --no-transfer-progress --settings $SETTINGS"
 wipe_local() {
   rm -rf "${HOME}/.m2/repository/dev/example/corporate-parent"
   rm -rf "${HOME}/.m2/repository/dev/example.build/corporate-bom"
-  rm -rf "${HOME}/.m2/repository/dev/example.build/corporate-pom"
   rm -rf "${HOME}/.m2/repository/dev/example/greeting"
   rm -rf "${HOME}/.m2/repository/dev/example/greeting-app"
 }

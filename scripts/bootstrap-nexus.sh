@@ -27,4 +27,4 @@ else
   echo "Nexus accepted NEXUS_PASSWORD"
 fi
 
-python3 "$ROOT/scripts/provision-nexus.py"
+"$ROOT/scripts/provision-nexus.sh"

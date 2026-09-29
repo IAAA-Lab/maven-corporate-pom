@@ -196,14 +196,13 @@ flowchart LR
     maven -->|"deploy products"| productHosted
 ```
 
-`settings/nexus-settings.xml` mirrors only repository id `central` to
-`maven-public`. `mirrorOf` is not `*`, so a later extra repository would not
-be swallowed. Deploy credentials are `NEXUS_PASSWORD`. URLs in
-`distributionManagement` are environment variables, not frozen hostnames
-inside released POMs.
+`settings/nexus-settings.xml` mirrors Maven Central to `maven-public`, which
+already includes the hosted platform and product repositories. Deploy
+credentials are `NEXUS_PASSWORD`. URLs in `distributionManagement` are
+environment variables, not frozen hostnames inside released POMs.
 
 The default `maven-releases` / `maven-snapshots` pair holds the platform.
-`scripts/provision-nexus.py` creates `products-releases` /
+`scripts/provision-nexus.sh` creates `products-releases` /
 `products-snapshots` and adds them to `maven-public`. Redeploy of the same
 release version is allowed so `./scripts/demo.sh` can be repeated.
 
