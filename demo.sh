@@ -90,7 +90,7 @@ $MVN -f "$ROOT/greeting-app/pom.xml" test
 ok "Tests passed (Hello, Codespaces). Internal artifacts and Spring Boot came through maven-public."
 
 heading 8 "Deploy greeting-app 0.1.0 → internal-artifact-releases"
-$MVN -f "$ROOT/greeting-app/pom.xml" deploy
+$MVN -f "$ROOT/greeting-app/pom.xml" deploy -DskipTests
 ok "Published to internal-artifact-releases"
 
 echo
