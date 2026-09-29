@@ -1,33 +1,60 @@
 # Parent y BOM corporativos con Spring Boot 2.7
 
 Ejemplo de plataforma Maven de empresa: **Spring Boot 2.7.18** y **Java 8**.
-Dos artefactos distintos, un reactor `corporate` que fija `groupId` y versión:
+Dos artefactos publicados, con la misma cadena que Spring Boot:
 
 - `corporate-bom` es el catálogo de versiones (`spring-boot-dependencies` en
-  Spring Boot).
+  Spring Boot). Fija `spring-boot.version`, importa `spring-boot-dependencies`
+  y gestiona las librerías internas aprobadas (`greeting` 2.0.0).
 - `corporate-parent` es la política de build sobre ese catálogo
-  (`spring-boot-starter-parent` en Spring Boot).
+  (`spring-boot-starter-parent` en Spring Boot): Java 8, UTF-8, enforcer y
+  versiones de plugins.
 
 Cadena de **parent**:
 
-`greeting-app` / `greeting` → `corporate-parent` → `corporate`
+`greeting-app` / `greeting` → `corporate-parent` → `corporate-bom`
 
-BOM y parent heredan el reactor; el `relativePath` por defecto es
-`../pom.xml`. `corporate-parent` importa `corporate-bom` (misma versión
-`${project.version}`). Las apps no declaran el BOM ni el reactor.
+aplicación → `spring-boot-starter-parent` → `spring-boot-dependencies`
+
+El BOM es el padre del parent, no un import. Así el parent hereda sus
+properties: `spring-boot-maven-plugin` se versiona con `${spring-boot.version}`
+y la línea de Boot se cambia en un solo sitio. Un import solo aporta
+`dependencyManagement`. Quien quiera el catálogo sin la política de build
+puede importar `corporate-bom` sin heredar nada.
 
 Este git tiene **tres proyectos Maven**:
 
-1. `corporate` (reactor: `corporate-bom` + `corporate-parent`)
+1. `corporate`: reactor de la plataforma (`corporate-bom` + `corporate-parent`)
 2. `greeting`
 3. `greeting-app`
 
-BOM y parent salen con `<revision>` del reactor (**1.0.0**). Un bump de
-plataforma en `corporate` es cambiar esa property. `flatten-maven-plugin`
-(`resolveCiFriendliesOnly`) deja en Nexus `1.0.0`, no `${revision}`.
-`greeting` y `greeting-app` dejan `<relativePath/>` vacío: Maven pide el
-parent a Nexus, no a este checkout. Siguen declarando a mano la versión de
-`corporate-parent`: no están en el reactor.
+## Plataforma: una versión, una publicación
+
+`corporate/pom.xml` solo agrega. Ningún POM lo declara como parent y no se
+publica (`maven.deploy.skip`).
+
+La versión de plataforma está en un solo sitio, `corporate/.mvn/maven.config`:
+
+```text
+-Drevision=1.0.0
+-DdeployAtEnd=true
+```
+
+El BOM y el parent declaran `${revision}`. `flatten-maven-plugin`
+(`resolveCiFriendliesOnly`) escribe `1.0.0` en el POM que se publica. Flatten
+solo corre en la plataforma (`inherited` `false`): los productos no lo
+heredan.
+
+`mvn -f corporate/pom.xml deploy` construye el BOM y después el parent.
+`deployAtEnd` retrasa la subida hasta que ha pasado todo el reactor: si falla
+el parent, no queda un BOM suelto en Nexus. No es una transacción; un corte a
+mitad de la subida puede dejar solo uno.
+
+`corporate-parent` lee el BOM del checkout
+(`<relativePath>../corporate-bom/pom.xml</relativePath>`), porque los dos
+salen en el mismo build. `greeting` y `greeting-app` dejan `<relativePath/>`
+vacío: Maven pide el parent a Nexus, no a este checkout. Declaran a mano la
+versión de `corporate-parent`.
 
 ## Settings de usuario: dónde se leen los artefactos
 
@@ -48,10 +75,16 @@ El deploy **no** usa ningún group: usa las URL de `<distributionManagement>`
 El password no va escrito en git: en el settings está `${env.NEXUS_PASSWORD}`.
 El usuario del `<server>` es `admin` (fijo en el fichero de la demo).
 
-## Corporate: coordenadas, metadatos y dónde se publica (`distributionManagement`)
+## Corporate-bom: metadatos y dónde se publica (`distributionManagement`)
 
-La publicación se declara en `<distributionManagement>` del reactor
-`corporate`. Lo heredan el BOM, el parent, `greeting` y `greeting-app`.
+`<distributionManagement>` y `organization` se declaran una vez, en
+`corporate-bom`. Los heredan `corporate-parent`, `greeting` y `greeting-app`:
+todos publican en el mismo Nexus y son de la misma organización.
+
+La plataforma **no** declara `<licenses>` ni `<scm>`. Maven no permite cortar
+la herencia. Cada producto diría que tiene la licencia de la plataforma y que
+vive en su repositorio (con el `artifactId` añadido a la URL). Cada proyecto
+declara los suyos si los necesita.
 
 El `<id>` (`nexus-internal-releases`) coincide con un `<server>` del
 settings (usuario `admin`, password interpolado). Las URL son
@@ -68,15 +101,15 @@ Codespace, reconstruir el contenedor (Maven 3.9.9 y Docker-in-Docker) y:
 ```
 
 El settings de usuario por defecto es `~/.m2/settings.xml`.
-El repo guarda `settings/nexus-settings.xml`. `./demo.sh` lo copia ahí para que 
+El repo guarda `settings/nexus-settings.xml`. `./demo.sh` lo copia ahí para que
 `mvn` pueda usar Nexus para consumir artefactos.
 
 Después arranca Nexus y hace deploy del reactor `corporate` (publica
-`corporate`, `corporate-bom` y `corporate-parent`) y luego de `greeting`.
-Antes de greeting borra `~/.m2/repository/dev/example` para que el parent
-no salga del disco. Luego los tests de `greeting-app` (parent, BOM y
-librería por `maven-internal`; Spring Boot por `maven-public` → proxy
-`maven-central`). Al final, deploy de `greeting-app` con `-DskipTests`.
+`corporate-bom` y `corporate-parent`) y luego de `greeting`. Antes de cada
+producto borra `~/.m2/repository/dev/example` para que la plataforma no salga
+del disco. Luego los tests de `greeting-app` (parent, BOM y librería por
+`maven-internal`; Spring Boot por `maven-public` → proxy `maven-central`).
+Al final, deploy de `greeting-app` con `-DskipTests`.
 
 `greeting` y `greeting-app` declaran `groupId` `dev.example.greeting`. Si no,
 heredarían `dev.example.corporate` del parent.
@@ -89,7 +122,6 @@ flowchart BT
         bootBom["spring-boot-dependencies 2.7.18"]
     end
     subgraph internal["Nexus internal-artifact-releases"]
-        reactor["dev.example.corporate:corporate 1.0.0"]
         bom["dev.example.corporate:corporate-bom 1.0.0"]
         parent["dev.example.corporate:corporate-parent 1.0.0"]
         library["dev.example.greeting:greeting 2.0.0"]
@@ -97,9 +129,7 @@ flowchart BT
     end
 
     bom -->|"import scope"| bootBom
-    bom -->|"parent"| reactor
-    parent -->|"parent"| reactor
-    parent -->|"import scope"| bom
+    parent -->|"parent"| bom
     library -->|"parent desde Nexus"| parent
     app -->|"parent desde Nexus"| parent
     app -->|"dependency, sin version"| library
@@ -112,26 +142,24 @@ independientes.
 
 ```mermaid
 flowchart LR
-    reactor["corporate 1.0.0"]
     bom["corporate-bom 1.0.0"]
     parent["corporate-parent 1.0.0"]
     boot["Spring Boot 2.7.18"]
     library["greeting 2.0.0"]
     product["greeting-app 0.1.0"]
 
-    bom -->|"parent"| reactor
-    parent -->|"parent"| reactor
-    parent -->|"import"| bom
-    bom -->|"manages"| boot
-    bom -->|"manages"| library
+    parent -->|"parent"| bom
+    bom -->|"gestiona"| boot
+    bom -->|"gestiona"| library
     library -->|"parent"| parent
     product -->|"parent"| parent
     product -->|"usa versión gestionada"| library
+    product -->|"usa versión gestionada"| boot
 ```
 
-- **Plataforma:** `<revision>` en `corporate/pom.xml`. BOM y parent usan
-  `${revision}` en el GAV del padre. La aplicación elige plataforma
-  cambiando la versión de `corporate-parent`.
+- **Plataforma:** `revision` en `corporate/.mvn/maven.config`. BOM y parent
+  salen juntos con esa versión. La aplicación elige plataforma cambiando la
+  versión de `corporate-parent`.
 - **Gestionadas:** el BOM fija Spring Boot y librerías internas aprobadas. No
   tienen que coincidir con la versión de plataforma.
 - **Producto:** cada librería y aplicación declara su versión. Si no, heredaría
@@ -151,10 +179,6 @@ flowchart LR
     upgradedApp -->|"parent"| newPlatform
     oldPlatform -->|"nuevo release de plataforma"| newPlatform
 ```
-
-`spring-boot.version` está en el reactor: el BOM la usa al importar
-`spring-boot-dependencies` y el parent al fijar `spring-boot-maven-plugin`.
-Un import de BOM no transmite properties.
 
 ## Repositorios
 

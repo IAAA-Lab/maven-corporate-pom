@@ -4,11 +4,12 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
+  <!-- Solo agrega: ningún POM lo declara como parent. -->
   <groupId>dev.example.corporate</groupId>
   <artifactId>corporate</artifactId>
   <version>${revision}</version>
   <packaging>pom</packaging>
-  <name>Plataforma corporativa</name>
+  <name>Plataforma corporativa (build)</name>
 
   <modules>
     <module>corporate-bom</module>
@@ -16,67 +17,7 @@
   </modules>
 
   <properties>
-    <revision>1.0.0</revision>
-    <spring-boot.version>2.7.18</spring-boot.version>
-    <flatten-maven-plugin.version>1.5.0</flatten-maven-plugin.version>
+    <maven.install.skip>true</maven.install.skip>
+    <maven.deploy.skip>true</maven.deploy.skip>
   </properties>
-
-  <organization>
-    <name>Example Organisation</name>
-    <url>https://example.invalid</url>
-  </organization>
-  <licenses>
-    <license>
-      <name>Apache License, Version 2.0</name>
-      <url>https://www.apache.org/licenses/LICENSE-2.0.txt</url>
-      <distribution>repo</distribution>
-    </license>
-  </licenses>
-  <scm>
-    <connection>scm:git:https://example.invalid/example/corporate-pom.git</connection>
-    <developerConnection>scm:git:https://example.invalid/example/corporate-pom.git</developerConnection>
-    <url>https://example.invalid/example/corporate-pom</url>
-    <tag>HEAD</tag>
-  </scm>
-
-  <distributionManagement>
-    <repository>
-      <id>nexus-internal-releases</id>
-      <url>${env.NEXUS_INTERNAL_RELEASES_URL}</url>
-    </repository>
-    <snapshotRepository>
-      <id>nexus-internal-snapshots</id>
-      <url>${env.NEXUS_INTERNAL_SNAPSHOTS_URL}</url>
-    </snapshotRepository>
-  </distributionManagement>
-
-  <build>
-    <plugins>
-      <plugin>
-        <groupId>org.codehaus.mojo</groupId>
-        <artifactId>flatten-maven-plugin</artifactId>
-        <version>${flatten-maven-plugin.version}</version>
-        <configuration>
-          <updatePomFile>true</updatePomFile>
-          <flattenMode>resolveCiFriendliesOnly</flattenMode>
-        </configuration>
-        <executions>
-          <execution>
-            <id>flatten</id>
-            <phase>process-resources</phase>
-            <goals>
-              <goal>flatten</goal>
-            </goals>
-          </execution>
-          <execution>
-            <id>flatten.clean</id>
-            <phase>clean</phase>
-            <goals>
-              <goal>clean</goal>
-            </goals>
-          </execution>
-        </executions>
-      </plugin>
-    </plugins>
-  </build>
 </project>

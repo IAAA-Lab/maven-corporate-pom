@@ -1,5 +1,5 @@
 #!/bin/sh
-# Un git: reactor corporate (BOM + parent) y dos productos. Un Nexus.
+# Un git: reactor corporate (corporate-bom + corporate-parent) y dos productos. Un Nexus.
 # Internos: hosted + group maven-internal. Externos: maven-public = proxy maven-central.
 set -eu
 
@@ -59,11 +59,12 @@ note "Redeploy permitido en los hosted para poder repetir el script."
 "$ROOT/scripts/bootstrap-nexus.sh"
 ok "Listo. UI: $NEXUS_URL  (admin / NEXUS_PASSWORD)"
 
-heading 4 "Deploy de corporate 1.0.0 → internal-artifact-releases"
-note "El reactor publica corporate, corporate-bom y corporate-parent con el mismo groupId y versión."
-note "Coordinate:  dev.example.corporate:corporate:1.0.0"
+heading 4 "Deploy de la plataforma 1.0.0 → internal-artifact-releases"
+note "Un reactor, una revision (corporate/.mvn/maven.config). deployAtEnd: suben juntos."
+note "Coordinates: dev.example.corporate:corporate-bom:1.0.0, dev.example.corporate:corporate-parent:1.0.0"
+wipe_local
 $MVN -f "$ROOT/corporate/pom.xml" deploy
-ok "Publicado el reactor (BOM + parent) en internal-artifact-releases"
+ok "Publicados corporate-bom y corporate-parent en internal-artifact-releases"
 
 heading 5 "Deploy de greeting 2.0.0 → internal-artifact-releases"
 note "La librería hereda corporate-parent. groupId dev.example.greeting, no corporate."
@@ -75,7 +76,7 @@ ok "Publicado en internal-artifact-releases (parent resuelto en Nexus)"
 
 heading 6 "Test de greeting-app 0.1.0 contra Nexus"
 note "La aplicación también hereda corporate-parent. Sin version en spring-boot-starter"
-note "ni greeting: las tiene que poner el BOM o el modelo no es válido."
+note "ni greeting: las pone corporate-bom, padre del parent. El modelo no es válido si faltan."
 wipe_local
 note "Coordinate:  dev.example.greeting:greeting-app:0.1.0"
 $MVN -f "$ROOT/greeting-app/pom.xml" test
@@ -89,7 +90,7 @@ echo
 echo "========================================================================"
 echo "  Hecho"
 echo "========================================================================"
-note "Internos (maven-internal → hosted):  corporate, corporate-bom, corporate-parent, greeting, greeting-app"
+note "Internos (maven-internal → hosted):  corporate-bom, corporate-parent, greeting, greeting-app"
 note "Externos (maven-public → maven-central): Spring Boot y el resto de Central"
 note "UI: $NEXUS_URL"
 echo

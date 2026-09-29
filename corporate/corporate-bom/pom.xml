@@ -4,15 +4,33 @@
          xsi:schemaLocation="http://maven.apache.org/POM/4.0.0 https://maven.apache.org/xsd/maven-4.0.0.xsd">
   <modelVersion>4.0.0</modelVersion>
 
-  <parent>
-    <groupId>dev.example.corporate</groupId>
-    <artifactId>corporate</artifactId>
-    <version>${revision}</version>
-  </parent>
-
+  <groupId>dev.example.corporate</groupId>
   <artifactId>corporate-bom</artifactId>
+  <version>${revision}</version>
   <packaging>pom</packaging>
   <name>Catálogo de dependencias corporativo</name>
+
+  <organization>
+    <name>Example Organisation</name>
+    <url>https://example.invalid</url>
+  </organization>
+  <!-- Sin <licenses> ni <scm>: los heredaría cada producto. Cada proyecto declara los suyos. -->
+
+  <distributionManagement>
+    <repository>
+      <id>nexus-internal-releases</id>
+      <url>${env.NEXUS_INTERNAL_RELEASES_URL}</url>
+    </repository>
+    <snapshotRepository>
+      <id>nexus-internal-snapshots</id>
+      <url>${env.NEXUS_INTERNAL_SNAPSHOTS_URL}</url>
+    </snapshotRepository>
+  </distributionManagement>
+
+  <properties>
+    <spring-boot.version>2.7.18</spring-boot.version>
+    <flatten-maven-plugin.version>1.5.0</flatten-maven-plugin.version>
+  </properties>
 
   <dependencyManagement>
     <dependencies>
@@ -31,4 +49,44 @@
       </dependency>
     </dependencies>
   </dependencyManagement>
+
+  <build>
+    <pluginManagement>
+      <plugins>
+        <plugin>
+          <groupId>org.codehaus.mojo</groupId>
+          <artifactId>flatten-maven-plugin</artifactId>
+          <version>${flatten-maven-plugin.version}</version>
+          <configuration>
+            <updatePomFile>true</updatePomFile>
+            <flattenMode>resolveCiFriendliesOnly</flattenMode>
+          </configuration>
+          <executions>
+            <execution>
+              <id>flatten</id>
+              <phase>process-resources</phase>
+              <goals>
+                <goal>flatten</goal>
+              </goals>
+            </execution>
+            <execution>
+              <id>flatten.clean</id>
+              <phase>clean</phase>
+              <goals>
+                <goal>clean</goal>
+              </goals>
+            </execution>
+          </executions>
+        </plugin>
+      </plugins>
+    </pluginManagement>
+    <plugins>
+      <!-- Solo la plataforma usa ${revision}; los productos no aplanan. -->
+      <plugin>
+        <groupId>org.codehaus.mojo</groupId>
+        <artifactId>flatten-maven-plugin</artifactId>
+        <inherited>false</inherited>
+      </plugin>
+    </plugins>
+  </build>
 </project>
