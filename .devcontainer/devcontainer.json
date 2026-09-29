@@ -19,10 +19,8 @@
   },
   "containerEnv": {
     "NEXUS_PASSWORD": "admin123",
-    "NEXUS_RELEASES_URL": "http://127.0.0.1:8081/repository/maven-releases/",
-    "NEXUS_SNAPSHOTS_URL": "http://127.0.0.1:8081/repository/maven-snapshots/",
-    "NEXUS_PRODUCTS_RELEASES_URL": "http://127.0.0.1:8081/repository/products-releases/",
-    "NEXUS_PRODUCTS_SNAPSHOTS_URL": "http://127.0.0.1:8081/repository/products-snapshots/"
+    "NEXUS_INTERNAL_RELEASES_URL": "http://127.0.0.1:8081/repository/internal-artifact-releases/",
+    "NEXUS_INTERNAL_SNAPSHOTS_URL": "http://127.0.0.1:8081/repository/internal-artifact-snapshots/"
   },
   "postCreateCommand": "java -version && mvn -version && docker version"
 }

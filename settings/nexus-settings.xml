@@ -13,7 +13,7 @@
     </mirror>
     <mirror>
       <id>nexus-public</id>
-      <name>Nexus public group (Central proxy, corporate hosted, product hosted)</name>
+      <name>Nexus public group (internal hosted + Central proxy)</name>
       <url>http://127.0.0.1:8081/repository/maven-public/</url>
       <mirrorOf>central</mirrorOf>
     </mirror>
@@ -26,22 +26,12 @@
       <password>${env.NEXUS_PASSWORD}</password>
     </server>
     <server>
-      <id>nexus-releases</id>
+      <id>nexus-internal-releases</id>
       <username>admin</username>
       <password>${env.NEXUS_PASSWORD}</password>
     </server>
     <server>
-      <id>nexus-snapshots</id>
-      <username>admin</username>
-      <password>${env.NEXUS_PASSWORD}</password>
-    </server>
-    <server>
-      <id>nexus-products-releases</id>
-      <username>admin</username>
-      <password>${env.NEXUS_PASSWORD}</password>
-    </server>
-    <server>
-      <id>nexus-products-snapshots</id>
+      <id>nexus-internal-snapshots</id>
       <username>admin</username>
       <password>${env.NEXUS_PASSWORD}</password>
     </server>

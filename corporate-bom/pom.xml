@@ -12,12 +12,12 @@
 
   <distributionManagement>
     <repository>
-      <id>nexus-releases</id>
-      <url>${env.NEXUS_RELEASES_URL}</url>
+      <id>nexus-internal-releases</id>
+      <url>${env.NEXUS_INTERNAL_RELEASES_URL}</url>
     </repository>
     <snapshotRepository>
-      <id>nexus-snapshots</id>
-      <url>${env.NEXUS_SNAPSHOTS_URL}</url>
+      <id>nexus-internal-snapshots</id>
+      <url>${env.NEXUS_INTERNAL_SNAPSHOTS_URL}</url>
     </snapshotRepository>
   </distributionManagement>
 

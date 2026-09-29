@@ -16,15 +16,4 @@
   <artifactId>greeting</artifactId>
   <version>2.0.0</version>
   <name>Greeting library</name>
-
-  <distributionManagement>
-    <repository>
-      <id>nexus-products-releases</id>
-      <url>${env.NEXUS_PRODUCTS_RELEASES_URL}</url>
-    </repository>
-    <snapshotRepository>
-      <id>nexus-products-snapshots</id>
-      <url>${env.NEXUS_PRODUCTS_SNAPSHOTS_URL}</url>
-    </snapshotRepository>
-  </distributionManagement>
 </project>

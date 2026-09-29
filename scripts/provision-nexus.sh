@@ -1,5 +1,6 @@
 #!/bin/sh
-# Create product hosted Maven repos and attach them to maven-public. Idempotent.
+# Create internal hosted Maven repos and attach them to maven-public. Idempotent.
+# Public artifacts (Spring Boot, …) stay on the maven-central proxy.
 set -eu
 
 NEXUS_URL=${NEXUS_URL:-http://127.0.0.1:8081}
@@ -37,7 +38,7 @@ ensure_hosted() {
   policy=$2
   code=$(http_code GET "/repositories/maven/hosted/$name")
   if [ "$code" = "200" ]; then
-    echo "Nexus hosted repository already exists: $name"
+    echo "  Nexus hosted repository already exists: $name"
     return 0
   fi
   body=$(cat <<EOF
@@ -46,7 +47,7 @@ EOF
 )
   code=$(http_code POST "/repositories/maven/hosted" "$body")
   case "$code" in
-    200|201|204) echo "Created Nexus hosted repository: $name" ;;
+    200|201|204) echo "  Created Nexus hosted repository: $name" ;;
     *)
       echo "Could not create $name: HTTP $code" >&2
       cat "$TMP" >&2
@@ -65,21 +66,21 @@ EOF
 )
   code=$(http_code PUT "/repositories/maven/hosted/$name" "$body")
   case "$code" in
-    200|204) echo "Redeploy allowed on $name" ;;
+    200|204) echo "  Redeploy allowed on $name" ;;
     *) echo "Could not allow redeploy on $name: HTTP $code" ;;
   esac
 }
 
-ensure_hosted products-releases RELEASE
-ensure_hosted products-snapshots SNAPSHOT
+ensure_hosted internal-artifact-releases RELEASE
+ensure_hosted internal-artifact-snapshots SNAPSHOT
 
 group_body=$(cat <<'EOF'
-{"name":"maven-public","online":true,"storage":{"blobStoreName":"default","strictContentTypeValidation":true},"group":{"memberNames":["maven-releases","maven-snapshots","maven-central","products-releases","products-snapshots"]}}
+{"name":"maven-public","online":true,"storage":{"blobStoreName":"default","strictContentTypeValidation":true},"group":{"memberNames":["internal-artifact-releases","internal-artifact-snapshots","maven-central"]}}
 EOF
 )
 code=$(http_code PUT "/repositories/maven/group/maven-public" "$group_body")
 case "$code" in
-  200|204) echo "maven-public includes corporate and product hosted repositories" ;;
+  200|204) echo "  maven-public = internal hosted + maven-central (public proxy)" ;;
   *)
     echo "Could not update maven-public: HTTP $code" >&2
     cat "$TMP" >&2
@@ -88,5 +89,5 @@ case "$code" in
     ;;
 esac
 
-allow_redeploy maven-releases RELEASE
-allow_redeploy maven-snapshots SNAPSHOT
+allow_redeploy internal-artifact-releases RELEASE
+allow_redeploy internal-artifact-snapshots SNAPSHOT

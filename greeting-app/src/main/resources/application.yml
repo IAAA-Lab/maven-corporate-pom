@@ -2,3 +2,8 @@ spring:
   main:
     web-application-type: none
     banner-mode: "off"
+    log-startup-info: false
+
+logging:
+  level:
+    root: warn
