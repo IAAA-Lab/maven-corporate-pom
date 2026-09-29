@@ -32,12 +32,19 @@ declares its own, so the greeting projects set `<groupId>` explicitly.
 
 ## Independent Maven projects
 
-Each directory is its own Maven build. Empty `<relativePath/>` skips a sibling
-`pom.xml`. `greeting-app/.mvn/maven.config` passes
-`settings/nexus-settings.xml`, so `corporate-parent` is resolved from the
-Nexus `maven-public` group (which includes `maven-releases`), not from Maven
-Central. That is the same idea as resolving `spring-boot-starter-parent`
-from Central, with Nexus as this company's Central.
+Each directory is its own Maven build. Maven’s default parent lookup is
+**not** the repository: it is the file `../pom.xml`. `<relativePath/>` with
+no value disables that checkout search, so Maven uses the local cache and
+then Nexus (`maven-public`), the same way an app finds
+`spring-boot-starter-parent` on Central. A non-empty
+`<relativePath>../corporate-parent/pom.xml</relativePath>` would read the
+sibling on disk and skip the registry.
+
+`settings/nexus-settings.xml` in this repo is the template. Maven’s default
+user settings file is `~/.m2/settings.xml`. `scripts/install-maven-settings.sh`
+copies the template there (Codespace `postCreateCommand` and `demo.sh` both
+run it). After that, a plain `mvn` command uses Nexus; no `.mvn/maven.config`
+and no `--settings` flag.
 
 ## Run it
 
@@ -66,9 +73,9 @@ mvn -f greeting-app/pom.xml help:effective-pom \
   -Doutput=target/effective-pom.xml
 ```
 
-`greeting-app/.mvn/maven.config` already selects the Nexus settings. Set
-`NEXUS_PASSWORD` if you are not in the Codespace (the dev container exports
-it). There is nothing to build at the repository root.
+`~/.m2/settings.xml` already mirrors Central to Nexus. Set `NEXUS_PASSWORD`
+if you are not in the Codespace (the dev container exports it). There is
+nothing to build at the repository root.
 
 ## Confirm that the corporate BOM is used
 
@@ -193,16 +200,14 @@ One Nexus instance, two hosted Maven repositories, one group for consumption.
 ```mermaid
 flowchart LR
     app["greeting-app"]
-    mvnConfig[".mvn/maven.config"]
-    settings["settings/nexus-settings.xml"]
+    userSettings["~/.m2/settings.xml"]
     publicGroup["maven-public"]
     central["Maven Central"]
     corporateHosted["maven-releases"]
     productHosted["products-releases"]
 
-    app --> mvnConfig
-    mvnConfig --> settings
-    settings -->|"mirrorOf central"| publicGroup
+    app --> userSettings
+    userSettings -->|"mirrorOf central"| publicGroup
     publicGroup --> central
     publicGroup --> corporateHosted
     publicGroup --> productHosted
@@ -211,8 +216,9 @@ flowchart LR
     app -->|"mvn deploy"| productHosted
 ```
 
-`settings/nexus-settings.xml` mirrors Maven Central to `maven-public`, which
-already includes the hosted platform and product repositories. Deploy
+The checked-in template `settings/nexus-settings.xml` is copied to
+`~/.m2/settings.xml`. That file mirrors Maven Central to `maven-public`,
+which already includes the hosted platform and product repositories. Deploy
 credentials are `NEXUS_PASSWORD`. URLs in `distributionManagement` are
 environment variables, not frozen hostnames inside released POMs.
 

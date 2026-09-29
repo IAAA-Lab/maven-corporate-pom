@@ -13,8 +13,8 @@ export NEXUS_SNAPSHOTS_URL=${NEXUS_SNAPSHOTS_URL:-$NEXUS_URL/repository/maven-sn
 export NEXUS_PRODUCTS_RELEASES_URL=${NEXUS_PRODUCTS_RELEASES_URL:-$NEXUS_URL/repository/products-releases/}
 export NEXUS_PRODUCTS_SNAPSHOTS_URL=${NEXUS_PRODUCTS_SNAPSHOTS_URL:-$NEXUS_URL/repository/products-snapshots/}
 
-SETTINGS="$ROOT/settings/nexus-settings.xml"
-MVN="mvn --batch-mode --no-transfer-progress --settings $SETTINGS"
+"$ROOT/scripts/install-maven-settings.sh"
+MVN="mvn --batch-mode --no-transfer-progress"
 
 wipe_local() {
   rm -rf "${HOME}/.m2/repository/dev/example"
