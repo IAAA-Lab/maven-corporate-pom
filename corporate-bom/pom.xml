@@ -10,6 +10,17 @@
   <packaging>pom</packaging>
   <name>Corporate dependency catalogue</name>
 
+  <distributionManagement>
+    <repository>
+      <id>nexus-releases</id>
+      <url>${env.NEXUS_RELEASES_URL}</url>
+    </repository>
+    <snapshotRepository>
+      <id>nexus-snapshots</id>
+      <url>${env.NEXUS_SNAPSHOTS_URL}</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <properties>
     <spring-boot.version>2.7.18</spring-boot.version>
   </properties>

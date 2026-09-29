@@ -5,16 +5,24 @@
   <modelVersion>4.0.0</modelVersion>
 
   <groupId>dev.example.build</groupId>
-  <artifactId>corporate-pom-example</artifactId>
+  <artifactId>corporate-pom</artifactId>
   <version>1.0.0</version>
   <packaging>pom</packaging>
-  <name>Corporate POM teaching reactor</name>
+  <name>Corporate platform (BOM and parent)</name>
 
-  <!-- Aggregation is separate from inheritance. This POM only orders the demo build. -->
+  <distributionManagement>
+    <repository>
+      <id>nexus-releases</id>
+      <url>${env.NEXUS_RELEASES_URL}</url>
+    </repository>
+    <snapshotRepository>
+      <id>nexus-snapshots</id>
+      <url>${env.NEXUS_SNAPSHOTS_URL}</url>
+    </snapshotRepository>
+  </distributionManagement>
+
   <modules>
     <module>corporate-bom</module>
     <module>corporate-parent</module>
-    <module>greeting</module>
-    <module>greeting-app</module>
   </modules>
 </project>

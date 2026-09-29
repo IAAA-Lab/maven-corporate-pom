@@ -22,9 +22,9 @@
     </license>
   </licenses>
   <scm>
-    <connection>scm:git:https://gitlab.example/example/corporate-pom.git</connection>
-    <developerConnection>scm:git:https://gitlab.example/example/corporate-pom.git</developerConnection>
-    <url>https://gitlab.example/example/corporate-pom</url>
+    <connection>scm:git:https://example.invalid/example/corporate-pom.git</connection>
+    <developerConnection>scm:git:https://example.invalid/example/corporate-pom.git</developerConnection>
+    <url>https://example.invalid/example/corporate-pom</url>
     <tag>HEAD</tag>
   </scm>
 
@@ -54,14 +54,14 @@
 
   <distributionManagement>
     <repository>
-      <id>gitlab-maven</id>
-      <name>GitLab project Maven releases</name>
-      <url>${env.CI_API_V4_URL}/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+      <id>nexus-releases</id>
+      <name>Nexus hosted Maven releases</name>
+      <url>${env.NEXUS_RELEASES_URL}</url>
     </repository>
     <snapshotRepository>
-      <id>gitlab-maven</id>
-      <name>GitLab project Maven snapshots</name>
-      <url>${env.CI_API_V4_URL}/projects/${env.CI_PROJECT_ID}/packages/maven</url>
+      <id>nexus-snapshots</id>
+      <name>Nexus hosted Maven snapshots</name>
+      <url>${env.NEXUS_SNAPSHOTS_URL}</url>
     </snapshotRepository>
   </distributionManagement>
 

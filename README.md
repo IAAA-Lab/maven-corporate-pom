@@ -6,18 +6,42 @@ Runnable example of a company Maven platform for **Spring Boot 2.7.18** and
 - `corporate-bom` is an importable dependency catalogue.
 - `corporate-parent` is inherited build policy.
 
-The repository is a compact teaching reactor. In the target GitLab Free
-topology, the corporate POMs share one project while each library and
-application has its own project and package registry.
+This git repository holds **three Maven projects**, not one reactor:
+
+1. Corporate platform (`pom.xml` plus `corporate-bom` and `corporate-parent`).
+2. `greeting`.
+3. `greeting-app`.
+
+Nexus OSS in Compose is the only registry. Platform artifacts deploy to
+`maven-releases`. Product artifacts deploy to a separate hosted repository,
+`products-releases`. Consumers resolve both through the `maven-public` group,
+which also proxies Maven Central.
+
+## Maven modules
+
+`<modules>` still makes sense **inside the corporate project**. The BOM and
+parent are two artifacts of one lockstep platform. An aggregator is how Maven
+builds and deploys them together without making either one the parent of the
+other.
+
+`<modules>` does **not** belong at the repository root spanning greeting or
+greeting-app. Those are independent Maven projects. If they were reactor
+modules, Maven would resolve `corporate-parent` from the filesystem and the
+Nexus story would be fake. Empty `<relativePath/>` is what forces the parent
+to come from Nexus.
 
 ## Run it
 
-Open this repository in a Codespace. The Java 8 image does not ship Maven, so the
-dev container installs Maven 3.9.9. Rebuild the container, then:
+Open this repository in a Codespace. Rebuild the container so Maven 3.9.9 and
+Docker-in-Docker are installed, then:
 
 ```bash
-mvn test
+./scripts/demo.sh
 ```
+
+That starts Nexus, publishes the platform to `maven-releases`, publishes
+`greeting` to `products-releases`, then runs the application tests after
+clearing `~/.m2` so both the parent and the library are fetched from Nexus.
 
 The test starts the Spring Boot application context and checks:
 
@@ -25,18 +49,18 @@ The test starts the Spring Boot application context and checks:
 Hello, Codespaces
 ```
 
-Install the reactor before running the application module by itself:
+Inspect the effective model of the application project:
 
 ```bash
-mvn install
-mvn -f greeting-app/pom.xml spring-boot:run
+export NEXUS_PASSWORD=admin123
+export NEXUS_PRODUCTS_RELEASES_URL=http://127.0.0.1:8081/repository/products-releases/
+export NEXUS_PRODUCTS_SNAPSHOTS_URL=http://127.0.0.1:8081/repository/products-snapshots/
+mvn -f greeting-app/pom.xml --settings settings/nexus-settings.xml \
+  help:effective-pom -Doutput=target/effective-pom.xml
 ```
 
-Inspect everything Maven inherited and imported:
-
-```bash
-mvn -pl greeting-app help:effective-pom
-```
+`mvn test` at the repository root only builds the corporate aggregator. It
+does not build greeting or greeting-app.
 
 ## Confirm that the corporate BOM is used
 
@@ -47,7 +71,9 @@ corporate parent did not import `corporate-bom`.
 Show the versions Maven actually resolved:
 
 ```bash
-mvn -pl greeting-app -am dependency:tree \
+export NEXUS_PASSWORD=admin123
+mvn -f greeting-app/pom.xml --settings settings/nexus-settings.xml \
+  dependency:tree \
   -Dincludes=dev.example:greeting,org.springframework.boot:spring-boot-starter
 ```
 
@@ -58,13 +84,6 @@ org.springframework.boot:spring-boot-starter:jar:2.7.18:compile
 dev.example:greeting:jar:2.0.0:compile
 ```
 
-For the complete model:
-
-```bash
-mvn -pl greeting-app help:effective-pom \
-  -Doutput=target/effective-pom.xml
-```
-
 `greeting-app/target/effective-pom.xml` contains those versions even though
 `greeting-app/pom.xml` does not. That is the observable effect of the BOM
 import. Parent-only effects are different: compiler and plugin configuration
@@ -73,24 +92,19 @@ imported.
 
 ## The chosen structure
 
-The root POM only aggregates the four modules. It is deliberately not their
-parent.
-
 ```mermaid
 flowchart TD
-    root["root aggregator"]
+    corporate["corporate aggregator"]
     bom["corporate-bom 1.0.0"]
     parent["corporate-parent 1.0.0"]
     library["greeting 2.0.0"]
     app["greeting-app 0.1.0"]
 
-    root -->|"builds"| bom
-    root -->|"builds"| parent
-    root -->|"builds"| library
-    root -->|"builds"| app
+    corporate -->|"modules"| bom
+    corporate -->|"modules"| parent
     bom -->|"import scope"| parent
-    parent -->|"parent inheritance"| library
-    parent -->|"parent inheritance"| app
+    parent -->|"parent, relativePath empty"| library
+    parent -->|"parent, relativePath empty"| app
     app -->|"dependency, no version"| library
 ```
 
@@ -100,7 +114,7 @@ The parent imports that BOM and supplies what an imported BOM cannot:
 - Java 8 compiler settings and UTF-8.
 - Pinned compiler, test, enforcer, and Spring Boot Maven plugins.
 - Enforced Maven 3.6+ and Java 8+.
-- GitLab deployment coordinates.
+- Nexus `distributionManagement` for the platform repositories.
 - Organisation, licence, and SCM metadata.
 
 The parent does **not** extend `spring-boot-starter-parent`. Maven permits one
@@ -156,137 +170,42 @@ flowchart LR
     newPlatform -->|"explicit parent bump"| upgradedApp
 ```
 
-On the default branch a real corporate-POM project carries the next snapshot,
-for example `1.1.0-SNAPSHOT`. A protected `v1.1.0` tag publishes immutable
-`1.1.0`. A BOM import does not expose its properties to the importing POM, so
+A BOM import does not expose its properties to the importing POM, so
 `spring-boot.version` appears in the BOM for its dependency import and in the
 parent for plugin management.
 
 ## Repository roles
 
-Public and internal artifacts use different products.
+One Nexus instance, two hosted Maven repositories, one group for consumption.
 
 ```mermaid
 flowchart LR
     maven["Maven build"]
-    settings["CI settings.xml"]
-    nexus["Nexus public proxy"]
+    settings["settings/nexus-settings.xml"]
+    publicGroup["maven-public group"]
     central["Maven Central"]
-    gitlabGroup["GitLab group registry"]
-    gitlabProject["Current GitLab project registry"]
+    corporateHosted["maven-releases"]
+    productHosted["products-releases"]
 
-    maven -->|"public resolution"| settings
-    settings -->|"mirrorOf central"| nexus
-    nexus --> central
-    maven -->|"internal resolution"| gitlabGroup
-    maven -->|"mvn deploy"| gitlabProject
+    maven -->|"mirrorOf central"| settings
+    settings --> publicGroup
+    publicGroup --> central
+    publicGroup --> corporateHosted
+    publicGroup --> productHosted
+    maven -->|"deploy platform"| corporateHosted
+    maven -->|"deploy products"| productHosted
 ```
 
-`settings/ci-settings.xml` demonstrates the split:
+`settings/nexus-settings.xml` mirrors only repository id `central` to
+`maven-public`. `mirrorOf` is not `*`, so a later extra repository would not
+be swallowed. Deploy credentials are `NEXUS_PASSWORD`. URLs in
+`distributionManagement` are environment variables, not frozen hostnames
+inside released POMs.
 
-- Only repository id `central` is mirrored to Nexus. `mirrorOf` is not `*`,
-  because that would redirect GitLab package requests to Nexus.
-- Internal packages are resolved from the GitLab group endpoint. Every
-  `groupId:artifactId` must have one owning project: GitLab group endpoints do
-  not guarantee uniqueness and return the newer duplicate.
-- Nexus and GitLab credentials are environment variables. No token belongs in
-  a POM or in source control.
-
-`distributionManagement` uses the current CI project:
-
-```text
-${env.CI_API_V4_URL}/projects/${env.CI_PROJECT_ID}/packages/maven
-```
-
-GitLab uses that same project endpoint for `<repository>` and
-`<snapshotRepository>`. The version determines whether Maven treats the
-artifact as a release or snapshot. Consumers read the group endpoint; CI
-publishes to the current project's endpoint.
-
-## Target GitLab topology
-
-The teaching reactor keeps all modules together only so it runs without
-company infrastructure. The actual company layout is:
-
-```mermaid
-flowchart TD
-    group["One GitLab group"]
-    platformProject["corporate-pom project"]
-    libraryProject["greeting project"]
-    appProject["greeting-app project"]
-    groupRegistry["Group Maven endpoint"]
-
-    group --> platformProject
-    group --> libraryProject
-    group --> appProject
-    platformProject -->|"publishes parent and BOM"| groupRegistry
-    libraryProject -->|"publishes unique coordinates"| groupRegistry
-    appProject -->|"resolves internal packages"| groupRegistry
-```
-
-Each source project publishes only to its own project package registry.
-Consumers use the group endpoint. The corporate parent and BOM are the
-exception to one artifact per source project: they intentionally share one
-project and one release.
-
-## CI publication
-
-`gitlab-ci.example.yml` is documentation rather than an active GitHub
-workflow. Copy and adapt it in a real GitLab project.
-
-```mermaid
-flowchart LR
-    branch["Feature branch or merge request"]
-    defaultBranch["Default branch"]
-    tag["Protected vX.Y.Z tag"]
-    verify["mvn verify"]
-    snapshot["Require SNAPSHOT; mvn deploy"]
-    release["Require matching immutable version; mvn deploy"]
-
-    branch --> verify
-    defaultBranch --> snapshot
-    tag --> release
-```
-
-Publishing is CI-only. The GitLab server id uses `gitlab-ci-token` and
-`CI_JOB_TOKEN`. The example's checked-in platform and product versions are
-releases for clarity; a real default branch changes its project version to the
-next snapshot before enabling the deploy job.
-
-### Dry-run the pipeline
-
-GitLab can simulate pipeline creation without running jobs. Copy
-`gitlab-ci.example.yml` to `.gitlab-ci.yml` in a disposable GitLab project,
-then:
-
-```bash
-export CI_API_V4_URL=https://gitlab.example/api/v4
-export CI_PROJECT_ID=1
-export GITLAB_TOKEN=          # personal access token, never committed
-DRY_RUN_REF=feature/demo ./scripts/lint-gitlab-ci.sh
-DRY_RUN_REF=main ./scripts/lint-gitlab-ci.sh
-DRY_RUN_REF=v1.0.0 ./scripts/lint-gitlab-ci.sh
-```
-
-`dry_run: true` asks GitLab to create a pipeline as if that ref had been
-pushed, then throw the result away. The JSON `jobs` list is the proof that
-the `rules` selected `verify`, `publish-snapshot`, or `publish-release`.
-Scripts, Maven, and the package registry are not invoked.
-
-A YAML parse on this machine is not enough: it cannot evaluate `rules`. The
-lint API needs a real project because `CI_DEFAULT_BRANCH` and protected tags
-come from that project.
-
-To execute the jobs, use that disposable GitLab project:
-
-1. Feature branch or merge request: only `verify` (`mvn verify`).
-2. Default branch with a `*-SNAPSHOT` version: `publish-snapshot`.
-3. Protected tag `vX.Y.Z` matching the project version: `publish-release`.
-4. Repeat the same release tag: GitLab rejects the duplicate immutable
-   version.
-
-`gitlab-runner exec` can run one job's `script` locally. It does not apply
-`rules`, merge-request variables, or `CI_JOB_TOKEN` package authentication.
+The default `maven-releases` / `maven-snapshots` pair holds the platform.
+`scripts/provision-nexus.py` creates `products-releases` /
+`products-snapshots` and adds them to `maven-public`. Redeploy of the same
+release version is allowed so `./scripts/demo.sh` can be repeated.
 
 ## Alternatives
 
@@ -334,19 +253,18 @@ Use this when an application cannot change its parent. Internal versions stay
 aligned, but company compiler rules, enforcer rules, metadata, and deployment
 settings are not inherited.
 
-### GitLab group endpoint in the POM
+### Repository URLs in the POM
 
 ```mermaid
 flowchart LR
     pom["project pom.xml"]
-    gitlabGroup["GitLab group registry"]
-    pom -->|"<repositories>"| gitlabGroup
+    registry["company Maven registry"]
+    pom -->|"repositories"| registry
 ```
 
-GitLab documents this portable option. A checkout can resolve internal
-artifacts without company settings. The URL is then frozen into every
-released POM, and a company `mirrorOf *` setting would redirect it. The chosen
-design treats repository locations as environment configuration.
+A checkout can then resolve artifacts without company `settings.xml`. The URL
+is frozen into every released POM, and a `mirrorOf *` setting would redirect
+it. The chosen design treats registry locations as environment configuration.
 
 ### One POM used as parent and BOM
 
@@ -370,5 +288,5 @@ keep the catalogue usable without inheriting company build behavior.
 - [Maven settings reference](https://maven.apache.org/settings.html)
 - [Maven mirror guide](https://maven.apache.org/guides/mini/guide-mirror-settings)
 - [Sonatype: why repositories in POMs are problematic](https://www.sonatype.com/blog/2009/02/why-putting-repositories-in-your-poms-is-a-bad-idea)
-- [GitLab Maven package registry](https://docs.gitlab.com/user/packages/maven_repository/)
+- [Nexus Repository REST: repositories](https://help.sonatype.com/en/repositories-api.html)
 - [JLBP-15: publish a BOM for multi-module projects](http://jlbp.dev/JLBP-15)
