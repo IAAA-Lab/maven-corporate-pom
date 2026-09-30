@@ -20,7 +20,7 @@
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
-    <maven-enforcer-plugin.version>3.5.0</maven-enforcer-plugin.version>
+    <maven-enforcer-plugin.version>3.6.3</maven-enforcer-plugin.version>
     <maven-surefire-plugin.version>3.5.6</maven-surefire-plugin.version>
   </properties>
 
@@ -63,7 +63,8 @@
             <configuration>
               <rules>
                 <requireMavenVersion>
-                  <version>[3.6.3,)</version>
+                  <!-- Older 3.9 releases print sun.misc.Unsafe and native-access warnings on JDK 25. -->
+                  <version>[3.9.12,)</version>
                 </requireMavenVersion>
                 <requireJavaVersion>
                   <version>[17,)</version>
