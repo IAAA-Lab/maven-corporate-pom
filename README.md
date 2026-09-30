@@ -1,5 +1,7 @@
 # Parent y BOM corporativos con Spring Boot 2.7
 
+[![CI](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/actions/workflows/ci.yml/badge.svg)](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/actions/workflows/ci.yml)
+
 ## Qué problema resuelve
 
 En una organización con muchos proyectos Java, cada equipo tiende a elegir sus
@@ -113,6 +115,10 @@ acaba de compilar.
 
 Codespaces reenvía el puerto 8081. Desde la pestaña «Ports» se abre Nexus en el
 navegador (usuario `admin`, password `admin123`) para ver lo publicado.
+
+En cada push, a cualquier rama, y en cada pull request a `main`, GitHub
+Actions ejecuta `./demo.sh` con un Nexus nuevo. Si falla algún paso, muestra el
+log de Nexus.
 
 ## Nexus: de dónde se leen y dónde se publican los artefactos
 
