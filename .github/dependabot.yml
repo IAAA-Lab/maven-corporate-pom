@@ -1,0 +1,7 @@
+version: 2
+updates:
+  # Maven and Docker versions are what this repository teaches; they change by hand, in tagged steps.
+  - package-ecosystem: github-actions
+    directory: /
+    schedule:
+      interval: weekly
