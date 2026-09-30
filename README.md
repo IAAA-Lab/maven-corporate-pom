@@ -91,7 +91,7 @@ flowchart BT
 ## Demostración
 
 Abre el repositorio en un Codespace (en GitHub: «Code» → «Codespaces» →
-«Create codespace on main»). El entorno ya trae Java 17, Maven 3.9.16 y Docker.
+«Create codespace on main»). El entorno ya trae Java 25, Maven 3.9.16 y Docker.
 En el terminal, ejecuta:
 
 ```bash
