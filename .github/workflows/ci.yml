@@ -20,7 +20,13 @@ jobs:
       - uses: actions/setup-java@v6
         with:
           distribution: temurin
-          java-version: '17'
+          java-version: '25'
+      # The runner's own Maven version drifts; use the same one as the Codespace.
+      - name: Maven 3.9.16
+        run: |
+          curl -fsSL https://repo1.maven.org/maven2/org/apache/maven/apache-maven/3.9.16/apache-maven-3.9.16-bin.tar.gz | tar xz -C "$RUNNER_TEMP"
+          echo "$RUNNER_TEMP/apache-maven-3.9.16/bin" >> "$GITHUB_PATH"
+      - run: mvn -v
       - run: ./demo.sh
       - if: failure()
         run: docker compose logs nexus
