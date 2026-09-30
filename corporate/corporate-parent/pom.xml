@@ -13,10 +13,12 @@
 
   <artifactId>corporate-parent</artifactId>
   <packaging>pom</packaging>
-  <name>Parent Spring Boot 3.5 Java 17</name>
+  <name>Parent Spring Boot 3.5 Java 25</name>
 
   <properties>
-    <maven.compiler.release>17</maven.compiler.release>
+    <maven.compiler.release>25</maven.compiler.release>
+    <!-- Mockito attaches an agent at test time; since JDK 21 that warns unless allowed. A property, so JaCoCo can append. -->
+    <argLine>-XX:+EnableDynamicAgentLoading</argLine>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -67,7 +69,7 @@
                   <version>[3.9.12,)</version>
                 </requireMavenVersion>
                 <requireJavaVersion>
-                  <version>[17,)</version>
+                  <version>[25,)</version>
                 </requireJavaVersion>
               </rules>
             </configuration>

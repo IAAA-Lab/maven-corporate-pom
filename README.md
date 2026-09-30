@@ -12,7 +12,7 @@ nueva de Spring Boot) obliga a tocarlos uno a uno.
 Este repositorio muestra una solución habitual con **Maven**, la herramienta
 que compila y empaqueta los proyectos Java: una **plataforma corporativa** que
 fija en un solo sitio las versiones y las reglas de build, y que todos los
-proyectos reutilizan. El ejemplo usa **Java 17** y **Spring Boot 3.5.16**.
+proyectos reutilizan. El ejemplo usa **Java 25** y **Spring Boot 3.5.16**.
 
 La plataforma anterior, con Java 8 y Spring Boot 2.7, sigue disponible en la
 etiqueta [`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-2.7).
@@ -47,9 +47,9 @@ Tres proyectos Maven:
    - `corporate-bom`: el catálogo de versiones. Fija la versión de Spring Boot
      (y con ella la de todas las librerías que Spring Boot gestiona) y la de
      las librerías internas aprobadas, como `greeting` 3.0.0.
-   - `corporate-parent`: las reglas de build comunes: Java 17, codificación
+   - `corporate-parent`: las reglas de build comunes: Java 25, codificación
      UTF-8, versiones de los plugins de Maven y una comprobación de que se usa
-     al menos Maven 3.9.12 y Java 17.
+     al menos Maven 3.9.12 y Java 25.
 2. `greeting`: una librería interna.
 3. `greeting-app`: una aplicación Spring Boot que usa esa librería.
 
