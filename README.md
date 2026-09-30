@@ -1,4 +1,4 @@
-# Parent y BOM corporativos con Spring Boot 2.7
+# Parent y BOM corporativos con Spring Boot 3.5
 
 [![CI](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/actions/workflows/ci.yml/badge.svg)](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/actions/workflows/ci.yml)
 
@@ -12,7 +12,7 @@ nueva de Spring Boot) obliga a tocarlos uno a uno.
 Este repositorio muestra una solución habitual con **Maven**, la herramienta
 que compila y empaqueta los proyectos Java: una **plataforma corporativa** que
 fija en un solo sitio las versiones y las reglas de build, y que todos los
-proyectos reutilizan. El ejemplo usa **Java 17** y **Spring Boot 2.7.18**.
+proyectos reutilizan. El ejemplo usa **Java 17** y **Spring Boot 3.5.16**.
 
 ## Conceptos
 
@@ -67,7 +67,7 @@ cómo se relacionan:
 ```mermaid
 flowchart BT
     subgraph external["Maven Central, a través de Nexus"]
-        bootBom["spring-boot-dependencies 2.7.18"]
+        bootBom["spring-boot-dependencies 3.5.16"]
     end
     subgraph internal["Nexus: artefactos de la organización"]
         bom["dev.example.corporate:corporate-bom 1.0.0"]
@@ -182,7 +182,7 @@ Hay tres tipos de versión, y cada una cambia por su cuenta:
 - **Plataforma** (1.0.0): la de `corporate-bom` y `corporate-parent`, que
   siempre se publican juntos y con la misma versión. Cada producto elige qué
   plataforma usa con la versión de `corporate-parent` que declara.
-- **Gestionadas** (Spring Boot 2.7.18, `greeting` 2.0.0): las que fija el
+- **Gestionadas** (Spring Boot 3.5.16, `greeting` 2.0.0): las que fija el
   catálogo. No tienen por qué coincidir con la de la plataforma.
 - **Producto** (`greeting-app` 0.1.0): cada librería y cada aplicación declara
   la suya. Si no lo hiciera, heredaría la de la plataforma y parecería parte de
@@ -192,7 +192,7 @@ Hay tres tipos de versión, y cada una cambia por su cuenta:
 flowchart LR
     bom["corporate-bom 1.0.0"]
     parent["corporate-parent 1.0.0"]
-    boot["Spring Boot 2.7.18"]
+    boot["Spring Boot 3.5.16"]
     library["greeting 2.0.0"]
     product["greeting-app 0.1.0"]
 
@@ -296,7 +296,9 @@ que queda en Nexus lleva la dirección concreta y no la variable.
 
 ## Fuentes
 
-- [Spring Boot Maven plugin: using Boot without its parent](https://docs.spring.io/spring-boot/docs/2.7.18/maven-plugin/reference/htmlsingle/#using-boot)
+- [Spring Boot Maven plugin: using Boot without its parent](https://docs.spring.io/spring-boot/3.5/maven-plugin/using.html)
+- [Spring Boot 3.5: system requirements](https://docs.spring.io/spring-boot/3.5/system-requirements.html)
+- [Spring Boot 3.0 migration guide](https://github.com/spring-projects/spring-boot/wiki/Spring-Boot-3.0-Migration-Guide)
 - [Maven settings reference](https://maven.apache.org/settings.html)
 - [Maven mirror guide](https://maven.apache.org/guides/mini/guide-mirror-settings)
 - [Sonatype: why repositories in POMs are problematic](https://www.sonatype.com/blog/2009/02/why-putting-repositories-in-your-poms-is-a-bad-idea)
