@@ -14,9 +14,11 @@ que compila y empaqueta los proyectos Java: una **plataforma corporativa** que
 fija en un solo sitio las versiones y las reglas de build, y que todos los
 proyectos reutilizan. El ejemplo usa **Java 25** y **Spring Boot 4.0.8**.
 
-La plataforma anterior, con Java 8 y Spring Boot 2.7, sigue disponible en la
-etiqueta [`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-2.7).
-Los commits que llevan de una a otra se explican en
+Las plataformas anteriores siguen disponibles en dos etiquetas:
+[`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-2.7)
+(Java 8 y Spring Boot 2.7) y
+[`springboot-3.5`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-3.5)
+(Java 17 y Spring Boot 3.5). Los commits que llevan de una a otra se explican en
 [Cómo evoluciona la plataforma](#cómo-evoluciona-la-plataforma).
 
 ## Conceptos
@@ -25,7 +27,7 @@ Los commits que llevan de una a otra se explican en
   las librerías de las que depende y cómo se compila.
 - **Artefacto**: lo que publica un proyecto (una librería, una aplicación o un
   POM) para que otros lo usen. Se identifica por `groupId:artifactId:versión`,
-  por ejemplo `dev.example.greeting:greeting:3.0.0`.
+  por ejemplo `dev.example.greeting:greeting:4.0.0`.
 - **BOM** (*bill of materials*): un POM que solo contiene una lista de
   librerías con su versión. Quien lo usa pide una librería sin indicar la
   versión y recibe la del catálogo.
@@ -46,7 +48,7 @@ Tres proyectos Maven:
 1. `corporate`: la plataforma. Reúne dos artefactos:
    - `corporate-bom`: el catálogo de versiones. Fija la versión de Spring Boot
      (y con ella la de todas las librerías que Spring Boot gestiona) y la de
-     las librerías internas aprobadas, como `greeting` 3.0.0.
+     las librerías internas aprobadas, como `greeting` 4.0.0.
    - `corporate-parent`: las reglas de build comunes: Java 25, codificación
      UTF-8, versiones de los plugins de Maven y una comprobación de que se usa
      al menos Maven 3.9.12 y Java 25.
@@ -75,10 +77,10 @@ flowchart BT
         bootBom["spring-boot-dependencies 4.0.8"]
     end
     subgraph internal["Nexus: artefactos de la organización"]
-        bom["dev.example.corporate:corporate-bom 2.0.0"]
-        parent["dev.example.corporate:corporate-parent 2.0.0"]
-        library["dev.example.greeting:greeting 3.0.0"]
-        app["dev.example.greeting:greeting-app 0.2.0"]
+        bom["dev.example.corporate:corporate-bom 3.0.0"]
+        parent["dev.example.corporate:corporate-parent 3.0.0"]
+        library["dev.example.greeting:greeting 4.0.0"]
+        app["dev.example.greeting:greeting-app 0.3.0"]
     end
 
     bom -->|"importa"| bootBom
@@ -188,22 +190,22 @@ flowchart TB
 
 Hay tres tipos de versión, y cada una cambia por su cuenta:
 
-- **Plataforma** (2.0.0): la de `corporate-bom` y `corporate-parent`, que
+- **Plataforma** (3.0.0): la de `corporate-bom` y `corporate-parent`, que
   siempre se publican juntos y con la misma versión. Cada producto elige qué
   plataforma usa con la versión de `corporate-parent` que declara.
-- **Gestionadas** (Spring Boot 4.0.8, `greeting` 3.0.0): las que fija el
+- **Gestionadas** (Spring Boot 4.0.8, `greeting` 4.0.0): las que fija el
   catálogo. No tienen por qué coincidir con la de la plataforma.
-- **Producto** (`greeting-app` 0.2.0): cada librería y cada aplicación declara
+- **Producto** (`greeting-app` 0.3.0): cada librería y cada aplicación declara
   la suya. Si no lo hiciera, heredaría la de la plataforma y parecería parte de
   ella.
 
 ```mermaid
 flowchart LR
-    bom["corporate-bom 2.0.0"]
-    parent["corporate-parent 2.0.0"]
+    bom["corporate-bom 3.0.0"]
+    parent["corporate-parent 3.0.0"]
     boot["Spring Boot 4.0.8"]
-    library["greeting 3.0.0"]
-    product["greeting-app 0.2.0"]
+    library["greeting 4.0.0"]
+    product["greeting-app 0.3.0"]
 
     parent -->|"hereda de"| bom
     bom -->|"fija versión de"| boot
@@ -222,24 +224,35 @@ Cada generación de la plataforma tiene una etiqueta en git:
 | --- | --- | --- | --- | --- | --- |
 | [`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-2.7) | 1.0.0 | 2.7.18 | 8 | 2.0.0 | 0.1.0 |
 | [`springboot-3.5`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-3.5) | 2.0.0 | 3.5.16 | 17 | 3.0.0 | 0.2.0 |
+| [`springboot-4.0`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-4.0) | 3.0.0 | 4.0.8 | 25 | 4.0.0 | 0.3.0 |
 
 Los commits entre dos etiquetas son la receta del cambio, un paso por commit:
 
 ```bash
 git log --reverse --stat springboot-2.7..springboot-3.5
+git log --reverse --stat springboot-3.5..springboot-4.0
 ```
 
+Las dos actualizaciones siguen los mismos pasos:
+
 1. **Abrir la versión nueva como `-SNAPSHOT`.** La plataforma pasa a
-   2.0.0-SNAPSHOT y los productos la siguen. Mientras dura el cambio, todo se
-   publica en `internal-artifact-snapshots`.
+   2.0.0-SNAPSHOT (después, 3.0.0-SNAPSHOT) y los productos la siguen.
+   Mientras dura el cambio, todo se publica en `internal-artifact-snapshots`.
 2. **Cambiar el entorno antes que el código.** El Codespace y la CI pasan a
-   Java 17; la plataforma sigue compilando para Java 8.
-3. **Subir el mínimo de Maven y los plugins.** Las mismas versiones de plugins
-   que gestiona Spring Boot 3.5.16.
-4. **Subir la versión de Java** de la plataforma a 17.
+   la Java nueva (17; después, 25); la plataforma sigue compilando para la
+   anterior.
+3. **Subir el mínimo de Maven y los plugins.** Las versiones de plugins son
+   las que gestiona la Spring Boot de destino. Para Java 25 el mínimo es
+   Maven 3.9.12: las 3.9 anteriores funcionan, pero avisan de APIs internas
+   de Java que dejarán de existir.
+4. **Subir la versión de Java** de la plataforma.
 5. **Subir Spring Boot** en el BOM: una sola property.
 6. **Publicar.** Todo pierde `-SNAPSHOT` en el mismo commit.
 7. **Documentar.**
+
+La segunda actualización añade un arreglo de la demo: `demo.sh` compila desde
+`clean`, porque al cambiar de etiqueta `target/` conservaba clases compiladas
+para la Java anterior.
 
 Cada commit pasa la demo completa en la CI, con un Nexus vacío.
 
@@ -252,26 +265,35 @@ Tres reglas explican ese orden:
   `greeting` 3.0.0 hereda del parent 2.0.0: ninguno se puede publicar sin el
   otro.
 - **Cada equipo decide cuándo actualiza.** Las aplicaciones ya publicadas
-  siguen con el parent 1.0.0, que sigue en Nexus, hasta que su equipo sube la
+  siguen con su parent (1.0.0 o 2.0.0), que sigue en Nexus, hasta que su equipo sube la
   versión de `corporate-parent`. Aquí la plataforma y los productos comparten
   repositorio y cambian en el mismo commit; en una organización, cada equipo
   hace ese cambio en su propio repositorio.
 
 ```mermaid
 flowchart LR
-    oldApp["App con parent 1.0.0"]
-    oldPlatform["Plataforma 1.0.0: Boot 2.7.18, Java 8"]
-    newPlatform["Plataforma 2.0.0: Boot 3.5.16, Java 17"]
-    upgradedApp["App con parent 2.0.0"]
+    app1["App con parent 1.0.0"]
+    app2["App con parent 2.0.0"]
+    app3["App con parent 3.0.0"]
+    p1["Plataforma 1.0.0: Boot 2.7.18, Java 8"]
+    p2["Plataforma 2.0.0: Boot 3.5.16, Java 17"]
+    p3["Plataforma 3.0.0: Boot 4.0.8, Java 25"]
 
-    oldApp -->|"hereda de"| oldPlatform
-    upgradedApp -->|"hereda de"| newPlatform
-    oldPlatform -->|"nueva versión de plataforma"| newPlatform
+    app1 -->|"hereda de"| p1
+    app2 -->|"hereda de"| p2
+    app3 -->|"hereda de"| p3
+    p1 -->|"nueva versión de plataforma"| p2
+    p2 -->|"nueva versión de plataforma"| p3
 ```
 
-Spring Boot 3 usa Jakarta EE: los paquetes `javax.*` pasan a `jakarta.*`. Ese
-cambio es del código de cada aplicación, no de la plataforma. `greeting-app`
-no usa ninguno, así que en este repositorio no aparece.
+Cada Spring Boot trae además cambios en el código de las aplicaciones, que no
+son de la plataforma:
+
+- Spring Boot 3 usa Jakarta EE: los paquetes `javax.*` pasan a `jakarta.*`.
+- Spring Boot 4 usa Spring Framework 7, divide su código en módulos más
+  pequeños y renombra algunos starters. La guía de migración los lista.
+
+`greeting-app` no usa nada de eso, así que en este repositorio no aparece.
 
 ## Detalles técnicos
 
@@ -284,13 +306,13 @@ La versión de la plataforma se escribe en un único sitio,
 `corporate/.mvn/maven.config`:
 
 ```text
--Drevision=2.0.0
+-Drevision=3.0.0
 -DdeployAtEnd=true
 ```
 
 El BOM y el parent declaran `${revision}` como versión. Al publicar,
 `flatten-maven-plugin` (`resolveCiFriendliesOnly`) sustituye esa variable por
-`2.0.0` en el POM que llega a Nexus. Flatten solo se ejecuta en la plataforma
+`3.0.0` en el POM que llega a Nexus. Flatten solo se ejecuta en la plataforma
 (`inherited` a `false`); los productos no lo heredan.
 
 ### Publicación conjunta
