@@ -1,11 +1,11 @@
 {
-  "name": "Corporate Maven platform (Java 8)",
-  "image": "mcr.microsoft.com/devcontainers/java:8-bookworm",
+  "name": "Corporate Maven platform (Java 17)",
+  "image": "mcr.microsoft.com/devcontainers/java:17-bookworm",
   "features": {
     "ghcr.io/devcontainers/features/java:1": {
       "version": "none",
       "installMaven": "true",
-      "mavenVersion": "3.9.9"
+      "mavenVersion": "3.9.16"
     },
     "ghcr.io/devcontainers/features/docker-in-docker:2": {
       "moby": true
