@@ -13,11 +13,10 @@
 
   <artifactId>corporate-parent</artifactId>
   <packaging>pom</packaging>
-  <name>Parent Spring Boot 2.7 Java 8</name>
+  <name>Parent Spring Boot 2.7 Java 17</name>
 
   <properties>
-    <maven.compiler.source>1.8</maven.compiler.source>
-    <maven.compiler.target>1.8</maven.compiler.target>
+    <maven.compiler.release>17</maven.compiler.release>
     <project.build.sourceEncoding>UTF-8</project.build.sourceEncoding>
     <project.reporting.outputEncoding>UTF-8</project.reporting.outputEncoding>
     <maven-compiler-plugin.version>3.14.1</maven-compiler-plugin.version>
@@ -67,7 +66,7 @@
                   <version>[3.6.3,)</version>
                 </requireMavenVersion>
                 <requireJavaVersion>
-                  <version>[1.8,)</version>
+                  <version>[17,)</version>
                 </requireJavaVersion>
               </rules>
             </configuration>
