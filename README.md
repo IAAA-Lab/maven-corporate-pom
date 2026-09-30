@@ -1,6 +1,6 @@
 # Parent y BOM corporativos con Spring Boot 4.0
 
-[![CI](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/actions/workflows/ci.yml/badge.svg)](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/actions/workflows/ci.yml)
+[![CI](https://github.com/IAAA-Lab/maven-corporate-pom/actions/workflows/ci.yml/badge.svg)](https://github.com/IAAA-Lab/maven-corporate-pom/actions/workflows/ci.yml)
 
 ## Qué problema resuelve
 
@@ -15,9 +15,9 @@ fija en un solo sitio las versiones y las reglas de build, y que todos los
 proyectos reutilizan. El ejemplo usa **Java 25** y **Spring Boot 4.0.8**.
 
 Las plataformas anteriores siguen disponibles en dos etiquetas:
-[`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-2.7)
+[`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom/tree/springboot-2.7)
 (Java 8 y Spring Boot 2.7) y
-[`springboot-3.5`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-3.5)
+[`springboot-3.5`](https://github.com/IAAA-Lab/maven-corporate-pom/tree/springboot-3.5)
 (Java 17 y Spring Boot 3.5). Los commits que llevan de una a otra se explican en
 [Cómo evoluciona la plataforma](#cómo-evoluciona-la-plataforma).
 
@@ -222,9 +222,9 @@ Cada generación de la plataforma tiene una etiqueta en git:
 
 | Etiqueta | Plataforma | Spring Boot | Java | `greeting` | `greeting-app` |
 | --- | --- | --- | --- | --- | --- |
-| [`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-2.7) | 1.0.0 | 2.7.18 | 8 | 2.0.0 | 0.1.0 |
-| [`springboot-3.5`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-3.5) | 2.0.0 | 3.5.16 | 17 | 3.0.0 | 0.2.0 |
-| [`springboot-4.0`](https://github.com/IAAA-Lab/maven-corporate-pom-springboot2/tree/springboot-4.0) | 3.0.0 | 4.0.8 | 25 | 4.0.0 | 0.3.0 |
+| [`springboot-2.7`](https://github.com/IAAA-Lab/maven-corporate-pom/tree/springboot-2.7) | 1.0.0 | 2.7.18 | 8 | 2.0.0 | 0.1.0 |
+| [`springboot-3.5`](https://github.com/IAAA-Lab/maven-corporate-pom/tree/springboot-3.5) | 2.0.0 | 3.5.16 | 17 | 3.0.0 | 0.2.0 |
+| [`springboot-4.0`](https://github.com/IAAA-Lab/maven-corporate-pom/tree/springboot-4.0) | 3.0.0 | 4.0.8 | 25 | 4.0.0 | 0.3.0 |
 
 Los commits entre dos etiquetas son la receta del cambio, un paso por commit:
 
