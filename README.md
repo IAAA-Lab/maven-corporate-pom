@@ -49,7 +49,7 @@ Tres proyectos Maven:
      las librerías internas aprobadas, como `greeting` 3.0.0.
    - `corporate-parent`: las reglas de build comunes: Java 17, codificación
      UTF-8, versiones de los plugins de Maven y una comprobación de que se usa
-     al menos Maven 3.6.3 y Java 17.
+     al menos Maven 3.9.12 y Java 17.
 2. `greeting`: una librería interna.
 3. `greeting-app`: una aplicación Spring Boot que usa esa librería.
 
