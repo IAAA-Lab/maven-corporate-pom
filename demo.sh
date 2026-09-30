@@ -77,9 +77,10 @@ ok "Listo. UI: $NEXUS_URL  (admin / NEXUS_PASSWORD)"
 
 heading 4 "Deploy de la plataforma $PLATFORM → $(hosted_for "$PLATFORM")"
 note "Un reactor, una revision (corporate/.mvn/maven.config). deployAtEnd: suben juntos."
+note "clean: al cambiar de tag, target/ tendría clases de otra versión de Java."
 note "Coordinates: dev.example.corporate:corporate-bom:$PLATFORM, dev.example.corporate:corporate-parent:$PLATFORM"
 wipe_local
-$MVN -f "$ROOT/corporate/pom.xml" deploy
+$MVN -f "$ROOT/corporate/pom.xml" clean deploy
 ok "Publicados corporate-bom y corporate-parent en $(hosted_for "$PLATFORM")"
 
 heading 5 "Deploy de greeting $LIBRARY → $(hosted_for "$LIBRARY")"
@@ -87,7 +88,7 @@ note "La librería hereda corporate-parent. groupId dev.example.greeting, no cor
 note "relativePath vacío: el parent se pide a maven-internal, no a maven-public."
 wipe_local
 note "Coordinate:  dev.example.greeting:greeting:$LIBRARY"
-$MVN -f "$ROOT/greeting/pom.xml" deploy
+$MVN -f "$ROOT/greeting/pom.xml" clean deploy
 ok "Publicado en $(hosted_for "$LIBRARY") (parent resuelto en Nexus)"
 
 heading 6 "Test de greeting-app $APP contra Nexus"
@@ -95,7 +96,7 @@ note "La aplicación también hereda corporate-parent. Sin version en spring-boo
 note "ni greeting: las pone corporate-bom, padre del parent. El modelo no es válido si faltan."
 wipe_local
 note "Coordinate:  dev.example.greeting:greeting-app:$APP"
-$MVN -f "$ROOT/greeting-app/pom.xml" test
+$MVN -f "$ROOT/greeting-app/pom.xml" clean test
 ok "Tests OK (Hola, Codespaces). Internos por maven-internal; Spring Boot por maven-public."
 
 heading 7 "Deploy de greeting-app $APP → $(hosted_for "$APP")"
